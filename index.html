@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="pageTitle">智慧共享自行車資料庫查詢與管理系統</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ========== HEADER ========== -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="#" class="logo" data-nav="home">
+        <span class="logo-icon">🚲</span>
+        <span class="logo-text" data-i18n="logoText">智慧共享自行車</span>
+      </a>
+
+      <nav class="main-nav" id="mainNav">
+        <a href="#" data-nav="home" class="active" data-i18n="navHome">首頁</a>
+        <a href="#" data-nav="stations" data-i18n="navStations">站點查詢</a>
+        <a href="#" data-nav="users" data-i18n="navUsers">會員資料</a>
+        <a href="#" data-nav="bikes" data-i18n="navBikes">自行車狀態</a>
+        <a href="#" data-nav="records" data-i18n="navRecords">租借紀錄</a>
+        <a href="#" data-nav="service" data-i18n="navService">客服回報</a>
+        <a href="#" data-nav="dashboard" data-i18n="navDashboard">數據分析</a>
+        <a href="#" data-nav="admin" data-i18n="navAdmin">管理員後台</a>
+      </nav>
+
+      <div class="header-right">
+        <div class="role-switch" id="roleSwitch">
+          <button class="role-btn active" data-role="guest" data-i18n="roleGuest">訪客</button>
+          <button class="role-btn" data-role="member" data-i18n="roleMember">會員</button>
+          <button class="role-btn" data-role="admin" data-i18n="roleAdmin">管理員</button>
+        </div>
+        <button class="btn btn-ghost" id="loginBtn" data-i18n="btnLogin">會員登入</button>
+        <button class="btn btn-outline" id="registerBtn" data-i18n="btnRegister">加入會員</button>
+        <div class="lang-switch" id="langSwitch">
+          <button class="lang active" type="button" data-lang="zh">中文</button>
+          <span class="lang-sep">/</span>
+          <button class="lang" type="button" data-lang="en">EN</button>
+        </div>
+        <button class="menu-toggle" id="menuToggle" aria-label="menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+
+    <!-- ========== 1. 首頁 HOME ========== -->
+    <section class="page active" id="page-home">
+      <div class="hero">
+        <div class="hero-text">
+          <h1 data-i18n="heroTitle">智慧共享自行車<br />資料庫查詢與管理系統</h1>
+          <p class="slogan" data-i18n="heroSlogan">即時查詢站點車輛數量與可用空位</p>
+          <p class="hero-desc" data-i18n="heroDesc">整合站點、車輛、租借紀錄與客服回報，提供友善、迅速、透明的公共自行車查詢體驗。</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary btn-large" data-nav="stations" data-i18n="heroBtnStations">立即查詢站點</button>
+            <button class="btn btn-outline btn-large" data-nav="dashboard" data-i18n="heroBtnDashboard">查看數據分析</button>
+          </div>
+        </div>
+        <div class="hero-banner">
+          <div class="banner-bike">🚲</div>
+          <div class="banner-circle"></div>
+        </div>
+      </div>
+
+      <!-- 4 statistic cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📍</div>
+          <div class="stat-label" data-i18n="statStations">總站點數</div>
+          <div class="stat-value" id="statStations">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🚲</div>
+          <div class="stat-label" data-i18n="statAvailable">可租車輛</div>
+          <div class="stat-value" id="statAvailable">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🅿️</div>
+          <div class="stat-label" data-i18n="statEmptySlots">可還空位</div>
+          <div class="stat-value" id="statEmptySlots">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🛠️</div>
+          <div class="stat-label" data-i18n="statRepair">維修車輛</div>
+          <div class="stat-value" id="statRepair">0</div>
+        </div>
+      </div>
+
+      <!-- Quick search -->
+      <div class="quick-search">
+        <h2 data-i18n="quickSearchTitle">快速查詢</h2>
+        <div class="search-bar">
+          <input type="text" id="quickSearchInput" data-i18n-placeholder="quickSearchPlaceholder" placeholder="請輸入站點名稱或站號" />
+          <button class="btn btn-primary" id="quickSearchBtn" data-i18n="quickSearchBtn">搜尋</button>
+        </div>
+      </div>
+
+      <!-- 4-step guide -->
+      <div class="guide">
+        <h2 data-i18n="guideTitle">使用步驟</h2>
+        <div class="guide-grid">
+          <div class="guide-step">
+            <div class="step-num">1</div>
+            <div class="step-title" data-i18n="guideStep1Title">註冊 / 登入</div>
+            <div class="step-desc" data-i18n="guideStep1Desc">加入會員即可開始租借</div>
+          </div>
+          <div class="guide-step">
+            <div class="step-num">2</div>
+            <div class="step-title" data-i18n="guideStep2Title">查詢站點</div>
+            <div class="step-desc" data-i18n="guideStep2Desc">查詢附近的站點與車輛數量</div>
+          </div>
+          <div class="guide-step">
+            <div class="step-num">3</div>
+            <div class="step-title" data-i18n="guideStep3Title">租借自行車</div>
+            <div class="step-desc" data-i18n="guideStep3Desc">挑選車輛並完成租借</div>
+          </div>
+          <div class="guide-step">
+            <div class="step-num">4</div>
+            <div class="step-title" data-i18n="guideStep4Title">歸還自行車</div>
+            <div class="step-desc" data-i18n="guideStep4Desc">於任一站點空位歸還</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 2. 站點查詢 STATIONS ========== -->
+    <section class="page" id="page-stations">
+      <div class="page-header">
+        <h1 data-i18n="pageStationsTitle">站點查詢</h1>
+        <p class="page-sub" data-i18n="pageStationsSub">查看所有站點的可租車輛與可還空位資訊</p>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="stationSearch" class="filter-input" data-i18n-placeholder="stationSearchPlaceholder" placeholder="搜尋站點名稱或站號" />
+        <div class="status-filter" id="statusFilter">
+          <button class="filter-btn active" data-status="all" data-i18n="filterAll">全部</button>
+          <button class="filter-btn" data-status="normal" data-i18n="statusNormal">正常</button>
+          <button class="filter-btn" data-status="full" data-i18n="statusFull">無空位</button>
+          <button class="filter-btn" data-status="empty" data-i18n="statusEmpty">無車可借</button>
+          <button class="filter-btn" data-status="low" data-i18n="statusLow">車輛不足</button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th data-i18n="thStationId">站號</th>
+              <th data-i18n="thStationName">站點名稱</th>
+              <th data-i18n="thBikes">可租車數量</th>
+              <th data-i18n="thEmptySlots">可還空位</th>
+              <th data-i18n="thStatus">狀態</th>
+              <th data-i18n="thAction">操作</th>
+            </tr>
+          </thead>
+          <tbody id="stationTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== 3. 會員資料 USERS ========== -->
+    <section class="page" id="page-users">
+      <div class="page-header">
+        <h1 data-i18n="pageUsersTitle">會員資料</h1>
+        <p class="page-sub" data-i18n="pageUsersSub">查看所有會員的基本資料與租借紀錄統計</p>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="userSearch" class="filter-input" data-i18n-placeholder="userSearchPlaceholder" placeholder="搜尋會員編號或姓名" />
+        <div class="status-filter" id="userStatusFilter">
+          <button class="filter-btn active" data-ustatus="all" data-i18n="filterAll">全部</button>
+          <button class="filter-btn" data-ustatus="normal" data-i18n="statusNormal">正常</button>
+          <button class="filter-btn" data-ustatus="pending" data-i18n="statusPending">尚有未歸還</button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th data-i18n="thUserId">會員編號</th>
+              <th data-i18n="thName">姓名</th>
+              <th data-i18n="thGender">性別</th>
+              <th data-i18n="thRentCount">租借次數</th>
+              <th data-i18n="thReturnCount">歸還次數</th>
+              <th data-i18n="thStatus">狀態</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== 4. 自行車狀態 BIKES ========== -->
+    <section class="page" id="page-bikes">
+      <div class="page-header">
+        <h1 data-i18n="pageBikesTitle">自行車狀態</h1>
+        <p class="page-sub" data-i18n="pageBikesSub">查看所有車輛的型號、狀態與所在站點</p>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="bikeSearch" class="filter-input" data-i18n-placeholder="bikeSearchPlaceholder" placeholder="搜尋車輛編號或車型" />
+        <div class="status-filter" id="bikeStatusFilter">
+          <button class="filter-btn active" data-status="all" data-i18n="filterAll">全部</button>
+          <button class="filter-btn" data-status="Available" data-i18n="statusAvailable">可租借</button>
+          <button class="filter-btn" data-status="Rented" data-i18n="statusRented">已租借</button>
+          <button class="filter-btn" data-status="Repair" data-i18n="statusRepair">維修中</button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th data-i18n="thBikeId">車輛編號</th>
+              <th data-i18n="thModel">車型</th>
+              <th data-i18n="thStatus">狀態</th>
+              <th data-i18n="thStation">所在站點</th>
+            </tr>
+          </thead>
+          <tbody id="bikeTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== 5. 租借紀錄 RENTAL RECORDS ========== -->
+    <section class="page" id="page-records">
+      <div class="page-header">
+        <h1 data-i18n="pageRecordsTitle">租借紀錄</h1>
+        <p class="page-sub" data-i18n="pageRecordsSub">查看會員的租借與歸還歷史紀錄</p>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="recordSearch" class="filter-input" data-i18n-placeholder="recordSearchPlaceholder" placeholder="搜尋會員編號或車輛編號" />
+      </div>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th data-i18n="thUserId">會員編號</th>
+              <th data-i18n="thBikeId">車輛編號</th>
+              <th data-i18n="thRentTime">租借時間</th>
+              <th data-i18n="thReturnTime">歸還時間</th>
+              <th data-i18n="thStatus">狀態</th>
+            </tr>
+          </thead>
+          <tbody id="recordTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== 6. 客服回報 CUSTOMER SERVICE ========== -->
+    <section class="page" id="page-service">
+      <div class="page-header">
+        <h1 data-i18n="pageServiceTitle">客服回報</h1>
+        <p class="page-sub" data-i18n="pageServiceSub">遇到問題嗎？請填寫表單，我們將盡快為您處理</p>
+      </div>
+
+      <div class="service-grid">
+        <!-- Submit report form -->
+        <div class="card form-card">
+          <h3 data-i18n="formTitle">問題回報</h3>
+          <form id="serviceForm">
+            <div class="form-row">
+              <label><span data-i18n="thUserId">會員編號</span> <span class="required">*</span></label>
+              <input type="text" id="formUid" placeholder="例：U0001" required />
+            </div>
+            <div class="form-row">
+              <label><span data-i18n="formStationLabel">站點</span> <span class="required">*</span></label>
+              <select id="formSid" required>
+                <option value="" data-i18n="formSelectStation">請選擇站點</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label><span data-i18n="thCaseNo">案件編號</span> <span class="required">*</span></label>
+              <select id="formNo" required>
+                <option value="" data-i18n="formSelectCase">請選擇案件編號</option>
+                <option value="N001">N001</option>
+                <option value="N002">N002</option>
+                <option value="N003">N003</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label><span data-i18n="formTypeLabel">問題類型</span> <span class="required">*</span></label>
+              <select id="formType" required>
+                <option value="" data-i18n="formSelectType">請選擇問題類型</option>
+                <option value="自行車故障" data-i18n="issueBikeBroken">自行車故障</option>
+                <option value="無法租借" data-i18n="issueCannotRent">無法租借</option>
+                <option value="無法歸還" data-i18n="issueCannotReturn">無法歸還</option>
+                <option value="App 問題" data-i18n="issueAppProblem">App 問題</option>
+                <option value="其他" data-i18n="issueOther">其他</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label><span data-i18n="thDescription">問題描述</span> <span class="required">*</span></label>
+              <textarea id="formDesc" rows="4" data-i18n-placeholder="formDescPlaceholder" placeholder="請詳細描述您遇到的問題..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-large btn-block" data-i18n="formSubmit">送出回報</button>
+          </form>
+        </div>
+
+        <!-- 回報紀錄 -->
+        <div class="card report-card">
+          <h3 data-i18n="reportHistoryTitle">回報紀錄</h3>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th data-i18n="thFormId">表單編號</th>
+                  <th data-i18n="thCaseNo">案件編號</th>
+                  <th data-i18n="thUserId">會員編號</th>
+                  <th data-i18n="thStation">站點</th>
+                  <th data-i18n="thDescription">問題描述</th>
+                  <th data-i18n="thStatus">狀態</th>
+                </tr>
+              </thead>
+              <tbody id="serviceTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 7. 數據分析 DASHBOARD ========== -->
+    <section class="page" id="page-dashboard">
+      <div class="page-header">
+        <h1 data-i18n="pageDashboardTitle">數據分析</h1>
+        <p class="page-sub" data-i18n="pageDashboardSub">一目了然的全站數據統計</p>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="card">
+          <h3 data-i18n="dashBikesChartTitle">各站點自行車數量比較</h3>
+          <div id="bikeBarChart" class="bar-chart"></div>
+        </div>
+
+        <div class="card">
+          <h3 data-i18n="dashSlotsChartTitle">各站點空位數量比較</h3>
+          <div id="slotBarChart" class="bar-chart"></div>
+        </div>
+
+        <div class="card">
+          <h3 data-i18n="dashRepairTitle">維修中車輛數</h3>
+          <div class="big-number">
+            <span id="repairCount">0</span>
+            <span class="unit" data-i18n="unitBikes">輛</span>
+          </div>
+          <p class="hint" data-i18n="dashRepairHint">目前正在維修的自行車總數</p>
+        </div>
+
+        <div class="card">
+          <h3 data-i18n="dashPopularTitle">熱門站點排行</h3>
+          <div id="popularList" class="popular-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 8. 管理員後台 ADMIN ========== -->
+    <section class="page" id="page-admin">
+      <div class="page-header">
+        <h1 data-i18n="pageAdminTitle">管理員後台</h1>
+        <p class="page-sub" data-i18n="pageAdminSub">管理站點資料、客服回報與系統維護</p>
+      </div>
+
+      <div class="admin-tabs">
+        <button class="tab-btn active" data-tab="stationManage" data-i18n="adminTabStations">站點管理</button>
+        <button class="tab-btn" data-tab="userManage" data-i18n="adminTabUsers">會員資料管理</button>
+        <button class="tab-btn" data-tab="serviceManage" data-i18n="adminTabServices">客服回報管理</button>
+      </div>
+
+      <!-- Tab: Station Management -->
+      <div class="tab-content active" id="tab-stationManage">
+        <div class="card">
+          <div class="card-header">
+            <h3 data-i18n="adminStationsListTitle">站點列表</h3>
+            <button class="btn btn-primary" id="addStationBtn" data-i18n="adminAddStation">+ 新增站點</button>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th data-i18n="thStationId">站號</th>
+                  <th data-i18n="thStationName">站點名稱</th>
+                  <th data-i18n="thBikes">可租車數量</th>
+                  <th data-i18n="thEmptySlots">可還空位</th>
+                  <th data-i18n="thAction">操作</th>
+                </tr>
+              </thead>
+              <tbody id="adminStationTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: User Management -->
+      <div class="tab-content" id="tab-userManage">
+        <div class="card">
+          <div class="card-header">
+            <h3 data-i18n="adminUsersListTitle">會員列表</h3>
+            <button class="btn btn-primary" id="addUserBtn" data-i18n="adminAddUser">+ 新增會員</button>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th data-i18n="thUserId">會員編號</th>
+                  <th data-i18n="thName">姓名</th>
+                  <th data-i18n="thGender">性別</th>
+                  <th data-i18n="thRentCount">租借次數</th>
+                  <th data-i18n="thReturnCount">歸還次數</th>
+                  <th data-i18n="thStatus">狀態</th>
+                  <th data-i18n="thAction">操作</th>
+                </tr>
+              </thead>
+              <tbody id="adminUserTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Service Management -->
+      <div class="tab-content" id="tab-serviceManage">
+        <div class="card">
+          <h3 data-i18n="adminServicesTitle">客服回報總覽</h3>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th data-i18n="thFormId">表單編號</th>
+                  <th data-i18n="thCaseNo">案件編號</th>
+                  <th data-i18n="thUserId">會員編號</th>
+                  <th data-i18n="thStation">站點</th>
+                  <th data-i18n="thDescription">問題描述</th>
+                  <th data-i18n="thStatus">狀態</th>
+                  <th data-i18n="thAction">操作</th>
+                </tr>
+              </thead>
+              <tbody id="adminServiceTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========== Modal: Station Detail ========== -->
+  <div class="modal-mask" id="stationModal">
+    <div class="modal">
+      <button class="modal-close" id="modalClose">×</button>
+      <h2 id="modalStationName">站點名稱</h2>
+      <div class="modal-body">
+        <div class="modal-info-row">
+          <span class="info-label" data-i18n="thStationId">站號</span>
+          <span class="info-value" id="modalStationId">-</span>
+        </div>
+        <div class="modal-info-row">
+          <span class="info-label" data-i18n="modalCurrentBikes">目前可租車輛</span>
+          <span class="info-value" id="modalBikeCount">-</span>
+        </div>
+        <div class="modal-info-row">
+          <span class="info-label" data-i18n="modalCurrentSlots">目前可還空位</span>
+          <span class="info-value" id="modalEmptySlots">-</span>
+        </div>
+        <div class="modal-info-row">
+          <span class="info-label" data-i18n="modalStationStatus">站點狀態</span>
+          <span class="info-value" id="modalStatus">-</span>
+        </div>
+        <div class="suggestion-box" id="modalSuggestion">
+          💡 建議文字
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== Modal: Add/Edit Station ========== -->
+  <div class="modal-mask" id="stationEditModal">
+    <div class="modal">
+      <button class="modal-close" id="editModalClose">×</button>
+      <h2 id="editModalTitle">新增站點</h2>
+      <form id="stationEditForm">
+        <div class="form-row">
+          <label><span data-i18n="thStationId">站號</span> <span class="required">*</span></label>
+          <input type="text" id="editSid" required />
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="thStationName">站點名稱</span> <span class="required">*</span></label>
+          <input type="text" id="editName" required />
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="thBikes">可租車數量</span> <span class="required">*</span></label>
+          <input type="number" id="editBikeCount" min="0" required />
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="thEmptySlots">可還空位</span> <span class="required">*</span></label>
+          <input type="number" id="editEmptySlots" min="0" required />
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" id="editCancel" data-i18n="btnCancel">取消</button>
+          <button type="submit" class="btn btn-primary" data-i18n="btnSave">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========== Modal: Add/Edit User ========== -->
+  <div class="modal-mask" id="userEditModal">
+    <div class="modal">
+      <button class="modal-close" id="userEditModalClose">×</button>
+      <h2 id="userEditModalTitle">新增會員</h2>
+      <form id="userEditForm">
+        <div class="form-row">
+          <label><span data-i18n="thUserId">會員編號</span> <span class="required">*</span></label>
+          <input type="text" id="editUid" data-i18n-placeholder="uidPlaceholder" placeholder="例：U0001" required />
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="thName">姓名</span> <span class="required">*</span></label>
+          <input type="text" id="editUserName" required />
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="thGender">性別</span> <span class="required">*</span></label>
+          <select id="editGender" required>
+            <option value="" data-i18n="formSelectGender">請選擇</option>
+            <option value="M" data-i18n="genderMale">男 (M)</option>
+            <option value="F" data-i18n="genderFemale">女 (F)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="thRentCount">租借次數</span> <span class="required">*</span></label>
+          <input type="number" id="editRentCount" min="0" required />
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="thReturnCount">歸還次數</span> <span class="required">*</span></label>
+          <input type="number" id="editReturnCount" min="0" required />
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" id="userEditCancel" data-i18n="btnCancel">取消</button>
+          <button type="submit" class="btn btn-primary" data-i18n="btnSave">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========== Toast ========== -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-col">
+        <h4 data-i18n="footerAboutTitle">關於我們</h4>
+        <p data-i18n="footerAboutDesc">智慧共享自行車資料庫查詢與管理系統，提供即時、透明的公共自行車資訊。</p>
+      </div>
+      <div class="footer-col">
+        <h4 data-i18n="footerHelpTitle">使用說明</h4>
+        <ul>
+          <li data-i18n="footerHelp1">如何註冊會員</li>
+          <li data-i18n="footerHelp2">如何租借車輛</li>
+          <li data-i18n="footerHelp3">如何歸還車輛</li>
+          <li data-i18n="footerHelp4">費率說明</li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4 data-i18n="footerFaqTitle">常見問題</h4>
+        <ul>
+          <li data-i18n="footerFaq1">如何查詢附近站點？</li>
+          <li data-i18n="footerFaq2">租借時間限制？</li>
+          <li data-i18n="footerFaq3">忘記密碼怎麼辦？</li>
+          <li data-i18n="footerFaq4">如何反映問題？</li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4 data-i18n="footerContactTitle">聯絡客服</h4>
+        <ul>
+          <li data-i18n="footerContact1">客服專線：0800-123-456</li>
+          <li data-i18n="footerContact2">客服信箱：service@example.com</li>
+          <li data-i18n="footerContact3">服務時間：24 小時</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom" data-i18n="footerCopyright">Copyright © 2026 智慧共享自行車資料庫系統</div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
