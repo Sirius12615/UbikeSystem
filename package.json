@@ -1,0 +1,24 @@
+{
+  "name": "database",
+  "version": "1.0.0",
+  "description": "> Smart Shared Bike Database Query & Management System > A bilingual (繁體中文 / English) front-end demo of a YouBike-style shared-bike information system.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sirius12615/UbikeSystem.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Sirius12615/UbikeSystem/issues"
+  },
+  "homepage": "https://github.com/Sirius12615/UbikeSystem#readme",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
+}

@@ -256,49 +256,50 @@ function setupLanguageSwitch() {
    1. MOCK DATA
    ============================================ */
 
-// Station list: sId format CHAR(5) per PDF (S0001..S0004)
-const STATIONS = [
-  { sId: "S0001", name: "FCU Main Gate",          bikeCount: 20, emptySlots: 10 },
-  { sId: "S0002", name: "Taichung Station",       bikeCount: 35, emptySlots:  5 },
-  { sId: "S0003", name: "Feng Chia Night Market", bikeCount: 15, emptySlots:  0 },
-  { sId: "S0004", name: "City Hall",              bikeCount:  8, emptySlots: 12 }
-];
+// 全域動態變數 (改由後端 API 載入)
+let STATIONS = [];
+let USERS = [];
+let BIKES = [];
+let RECORDS = [];
+let SERVICES = [];
 
-// User list: uId, name, gender, rentCount, returnCount per PDF
-const USERS = [
-  { uId: "U0001", name: "Tony Lin",    gender: "M", rentCount: 10, returnCount: 10 },
-  { uId: "U0002", name: "Mary Jane",   gender: "F", rentCount:  5, returnCount:  4 },
-  { uId: "U0003", name: "John Doe",    gender: "M", rentCount:  2, returnCount:  2 },
-  { uId: "U0004", name: "Emily Chen",  gender: "F", rentCount:  0, returnCount:  0 },
-  { uId: "U0005", name: "Bruce Wang",  gender: "M", rentCount: 15, returnCount: 15 }
-];
+const API_BASE = ''; // 後端 API 基礎路徑 (同 Host 可為空)
 
-// Bike list: bId (vehicle id), model, status, sId (current station)
-const BIKES = [
-  { bId: "B0001", model: "Giant Escape 3",   status: "Available", sId: "S0001" },
-  { bId: "B0002", model: "Giant Escape 3",   status: "Rented",    sId: null   },
-  { bId: "B0003", model: "Merida Crossway",  status: "Repair",    sId: "S0003" },
-  { bId: "B0004", model: "Merida Crossway",  status: "Available", sId: "S0002" }
-];
+// 通用 API 請求函式
+async function apiFetch(url, options = {}) {
+  try {
+    const res = await fetch(API_BASE + url, options);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || `HTTP error! status: ${res.status}`);
+    }
+    return await res.json();
+  } catch (err) {
+    console.error('API 錯誤:', err);
+    showToast(currentLang === 'en' ? `Network error: ${err.message}` : `網路連線錯誤: ${err.message}`, 'error');
+    throw err;
+  }
+}
 
-// Rental records: uid, bid, rent_time, return_time per PDF
-const RECORDS = [
-  { uId: "U0001", bId: "B0001", rentTime: "2026-05-28 08:00:00", returnTime: "2026-05-28 08:30:00" },
-  { uId: "U0002", bId: "B0002", rentTime: "2026-05-29 09:00:00", returnTime: "" },
-  { uId: "U0003", bId: "B0004", rentTime: "2026-05-29 10:00:00", returnTime: "2026-05-29 11:20:00" },
-  { uId: "U0005", bId: "B0003", rentTime: "2026-05-30 13:00:00", returnTime: "" }
-];
-
-// Customer service feedback: form_id, no, sid, description, uid per PDF
-let SERVICES = [
-  { formId: "F0001", no: "N001", sId: "S0001", desc: "App crash on login",                    uId: "U0001", status: "處理中" },
-  { formId: "F0002", no: "N001", sId: "S0004", desc: "Overcharged on last ride",               uId: "U0002", status: "已完成" },
-  { formId: "F0003", no: "N002", sId: "S0003", desc: "Station full cannot return bike",        uId: "U0003", status: "處理中" },
-  { formId: "F0004", no: "N003", sId: "S0002", desc: "Broken bike lock",                      uId: "U0005", status: "處理中" }
-];
-
-// Generate formId like F0005, F0006... (CHAR(5))
-let nextFormIdNum = SERVICES.length + 1;   // start at 5 -> F0005
+// 重新從後端撈取所有最新資料
+async function fetchAllData() {
+  try {
+    const [stations, users, bikes, records, services] = await Promise.all([
+      apiFetch('/api/stations'),
+      apiFetch('/api/users'),
+      apiFetch('/api/bikes'),
+      apiFetch('/api/records'),
+      apiFetch('/api/services')
+    ]);
+    STATIONS = stations;
+    USERS = users;
+    BIKES = bikes;
+    RECORDS = records;
+    SERVICES = services;
+  } catch (err) {
+    console.error('無法從後端同步資料', err);
+  }
+}
 
 /* ============================================
    2. UTILITIES
@@ -826,7 +827,7 @@ function renderServiceTable() {
 }
 
 function setupServiceForm() {
-  $("serviceForm").addEventListener("submit", (e) => {
+  $("serviceForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const uId  = $("formUid").value.trim();
     const sId  = $("formSid").value;
@@ -839,23 +840,25 @@ function setupServiceForm() {
       return;
     }
 
-    // Generate formId like F0005, F0006... (CHAR(5))
-    const formId = "F" + String(nextFormIdNum++).padStart(4, "0");
+    try {
+      const res = await apiFetch(`/api/services`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ no, sId, uId, desc: `[${type}] ${desc}` })
+      });
 
-    const newSv = {
-      formId,
-      no,
-      uId,
-      sId,
-      desc: `[${type}] ${desc}`,
-      status: "處理中"
-    };
-    SERVICES.unshift(newSv);
-
-    showToast(currentLang === "en" ? "Report submitted — we'll handle it ASAP" : "回報已送出，我們將盡快處理", "success");
-    e.target.reset();
-    renderServiceTable();
-    renderAdminServiceTable();   // sync admin table
+      if (res.success) {
+        showToast(currentLang === "en" ? "Report submitted — we'll handle it ASAP" : "回報已送出，我們將盡快處理", "success");
+        e.target.reset();
+        await fetchAllData();
+        renderServiceTable();
+        renderAdminServiceTable();   // sync admin table
+      } else {
+        showToast(res.message, "error");
+      }
+    } catch (err) {
+      // 錯誤已在 apiFetch 處理
+    }
   });
 }
 
@@ -994,19 +997,28 @@ function openEditStationModal(sId) {
   $("stationEditModal").classList.add("active");
 }
 
-function deleteStation(sId) {
+async function deleteStation(sId) {
   const confirmMsg = currentLang === "en"
     ? `Are you sure you want to delete station ${sId}?`
     : `確定要刪除站點 ${sId} 嗎？`;
   if (!confirm(confirmMsg)) return;
-  const idx = STATIONS.findIndex(s => s.sId === sId);
-  if (idx >= 0) STATIONS.splice(idx, 1);
 
-  showToast(currentLang === "en" ? "Station deleted" : "已刪除站點", "success");
-  renderAdminStationTable();
-  renderStationTable();          // sync user-facing table
-  renderHomeStats();
-  renderDashboard();
+  try {
+    const res = await apiFetch(`/api/stations/${sId}`, { method: 'DELETE' });
+    if (res.success) {
+      showToast(currentLang === "en" ? "Station deleted" : "已刪除站點", "success");
+      await fetchAllData();
+      renderAdminStationTable();
+      renderStationTable();          // sync user-facing table
+      renderHomeStats();
+      renderDashboard();
+      populateStationSelect();
+    } else {
+      showToast(res.message, "error");
+    }
+  } catch (err) {
+    // 錯誤已在 apiFetch 處理
+  }
 }
 
 function setupStationEdit() {
@@ -1017,7 +1029,7 @@ function setupStationEdit() {
     if (e.target.id === "stationEditModal") $("stationEditModal").classList.remove("active");
   });
 
-  $("stationEditForm").addEventListener("submit", (e) => {
+  $("stationEditForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const sId        = $("editSid").value.trim();
     const name       = $("editName").value.trim();
@@ -1040,31 +1052,45 @@ function setupStationEdit() {
       return;
     }
 
-    if (editingStationId) {
-      // Update
-      const s = STATIONS.find(x => x.sId === editingStationId);
-      if (s) {
-        s.name = name;
-        s.bikeCount = bikeCount;
-        s.emptySlots = emptySlots;
+    try {
+      if (editingStationId) {
+        // Update
+        const res = await apiFetch(`/api/stations/${editingStationId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, bikeCount, emptySlots })
+        });
+        if (res.success) {
+          showToast(T ? "Station updated" : "站點已更新", "success");
+        } else {
+          showToast(res.message, "error");
+          return;
+        }
+      } else {
+        // Add new
+        const res = await apiFetch(`/api/stations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sId, name, bikeCount, emptySlots })
+        });
+        if (res.success) {
+          showToast(T ? "Station added" : "已新增站點", "success");
+        } else {
+          showToast(res.message || (T ? "Station ID already exists" : "站號已存在"), "error");
+          return;
+        }
       }
-      showToast(T ? "Station updated" : "站點已更新", "success");
-    } else {
-      // Add new
-      if (STATIONS.some(x => x.sId === sId)) {
-        showToast(T ? "Station ID already exists" : "站號已存在", "error");
-        return;
-      }
-      STATIONS.push({ sId, name, bikeCount, emptySlots });
-      showToast(T ? "Station added" : "已新增站點", "success");
-    }
 
-    $("stationEditModal").classList.remove("active");
-    renderAdminStationTable();
-    renderStationTable();
-    populateStationSelect();
-    renderHomeStats();
-    renderDashboard();
+      $("stationEditModal").classList.remove("active");
+      await fetchAllData();
+      renderAdminStationTable();
+      renderStationTable();
+      populateStationSelect();
+      renderHomeStats();
+      renderDashboard();
+    } catch (err) {
+      // 錯誤已在 apiFetch 處理
+    }
   });
 }
 
@@ -1105,15 +1131,24 @@ function renderAdminServiceTable() {
   });
 }
 
-function resolveService(formId) {
-  const sv = SERVICES.find(x => x.formId === formId);
-  if (!sv) return;
-  sv.status = "已完成";
-  showToast(currentLang === "en"
-    ? `Form ${formId} marked as resolved`
-    : `表單 ${formId} 已標記為完成`, "success");
-  renderAdminServiceTable();
-  renderServiceTable();    // sync service page
+async function resolveService(formId) {
+  try {
+    const res = await apiFetch(`/api/services/${formId}/resolve`, {
+      method: 'PUT'
+    });
+    if (res.success) {
+      showToast(currentLang === "en"
+        ? `Form ${formId} marked as resolved`
+        : `表單 ${formId} 已標記為完成`, "success");
+      await fetchAllData();
+      renderAdminServiceTable();
+      renderServiceTable();    // sync service page
+    } else {
+      showToast(res.message, "error");
+    }
+  } catch (err) {
+    // 錯誤已在 apiFetch 處理
+  }
 }
 
 // 10.3 Admin tabs
@@ -1187,17 +1222,25 @@ function openEditUserModal(uId) {
   $("userEditModal").classList.add("active");
 }
 
-function deleteUser(uId) {
+async function deleteUser(uId) {
   const confirmMsg = currentLang === "en"
     ? `Are you sure you want to delete member ${uId}?`
     : `確定要刪除會員 ${uId} 嗎？`;
   if (!confirm(confirmMsg)) return;
-  const idx = USERS.findIndex(u => u.uId === uId);
-  if (idx >= 0) USERS.splice(idx, 1);
 
-  showToast(currentLang === "en" ? "Member deleted" : "已刪除會員", "success");
-  renderAdminUserTable();
-  renderUserTable();   // sync user-facing table
+  try {
+    const res = await apiFetch(`/api/users/${uId}`, { method: 'DELETE' });
+    if (res.success) {
+      showToast(currentLang === "en" ? "Member deleted" : "已刪除會員", "success");
+      await fetchAllData();
+      renderAdminUserTable();
+      renderUserTable();   // sync user-facing table
+    } else {
+      showToast(res.message, "error");
+    }
+  } catch (err) {
+    // 錯誤已在 apiFetch 處理
+  }
 }
 
 function setupUserEdit() {
@@ -1211,7 +1254,7 @@ function setupUserEdit() {
     if (e.target.id === "userEditModal") $("userEditModal").classList.remove("active");
   });
 
-  $("userEditForm").addEventListener("submit", (e) => {
+  $("userEditForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const uId        = $("editUid").value.trim();
     const name       = $("editUserName").value.trim();
@@ -1233,29 +1276,42 @@ function setupUserEdit() {
       return;
     }
 
-    if (editingUserId) {
-      // Update
-      const u = USERS.find(x => x.uId === editingUserId);
-      if (u) {
-        u.name = name;
-        u.gender = gender;
-        u.rentCount = rentCount;
-        u.returnCount = returnCount;
+    try {
+      if (editingUserId) {
+        // Update
+        const res = await apiFetch(`/api/users/${editingUserId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, gender, rentCount, returnCount })
+        });
+        if (res.success) {
+          showToast(T ? "Member updated" : "會員資料已更新", "success");
+        } else {
+          showToast(res.message, "error");
+          return;
+        }
+      } else {
+        // Add new
+        const res = await apiFetch(`/api/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uId, name, gender, rentCount, returnCount })
+        });
+        if (res.success) {
+          showToast(T ? "Member added" : "已新增會員", "success");
+        } else {
+          showToast(res.message || (T ? "User ID already exists" : "會員編號已存在"), "error");
+          return;
+        }
       }
-      showToast(T ? "Member updated" : "會員資料已更新", "success");
-    } else {
-      // Add new
-      if (USERS.some(x => x.uId === uId)) {
-        showToast(T ? "User ID already exists" : "會員編號已存在", "error");
-        return;
-      }
-      USERS.push({ uId, name, gender, rentCount, returnCount });
-      showToast(T ? "Member added" : "已新增會員", "success");
-    }
 
-    $("userEditModal").classList.remove("active");
-    renderAdminUserTable();
-    renderUserTable();
+      $("userEditModal").classList.remove("active");
+      await fetchAllData();
+      renderAdminUserTable();
+      renderUserTable();
+    } catch (err) {
+      // 錯誤已在 apiFetch 處理
+    }
   });
 }
 
@@ -1263,12 +1319,15 @@ function setupUserEdit() {
    11. INIT
    ============================================ */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   setupNavigation();
   setupRoleSwitch();
   setupMobileMenu();
   setupAuthButtons();
   setupLanguageSwitch();
+
+  // 從後端 API 載入資料
+  await fetchAllData();
 
   // Apply language (default: zh)
   applyI18n();
