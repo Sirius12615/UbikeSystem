@@ -180,9 +180,10 @@ const db = {
 
   async addUser(user) {
     const { uId, name, gender, rentCount, returnCount } = user;
+    const upperUid = uId.toUpperCase();
     if (USE_DATABASE && sql) {
       const request = new sql.Request();
-      request.input('uId', sql.Char(5), uId);
+      request.input('uId', sql.Char(5), upperUid);
       request.input('name', sql.NVarChar(100), name);
       request.input('gender', sql.Char(1), gender);
       request.input('rentCount', sql.Int, rentCount);
@@ -196,19 +197,20 @@ const db = {
       await request.query('INSERT INTO USERS (uId, name, gender, rentCount, returnCount) VALUES (@uId, @name, @gender, @rentCount, @returnCount)');
       return true;
     } else {
-      if (USERS.some(u => u.uId === uId)) {
+      if (USERS.some(u => u.uId === upperUid)) {
         throw new Error('User ID already exists');
       }
-      USERS.push({ uId, name, gender, rentCount, returnCount });
+      USERS.push({ uId: upperUid, name, gender, rentCount, returnCount });
       return true;
     }
   },
 
   async updateUser(uId, data) {
     const { name, gender, rentCount, returnCount } = data;
+    const upperUid = uId.toUpperCase();
     if (USE_DATABASE && sql) {
       const request = new sql.Request();
-      request.input('uId', sql.Char(5), uId);
+      request.input('uId', sql.Char(5), upperUid);
       request.input('name', sql.NVarChar(100), name);
       request.input('gender', sql.Char(1), gender);
       request.input('rentCount', sql.Int, rentCount);
@@ -216,7 +218,7 @@ const db = {
       await request.query('UPDATE USERS SET name = @name, gender = @gender, rentCount = @rentCount, returnCount = @returnCount WHERE uId = @uId');
       return true;
     } else {
-      const user = USERS.find(u => u.uId === uId);
+      const user = USERS.find(u => u.uId === upperUid);
       if (!user) throw new Error('User not found');
       user.name = name;
       user.gender = gender;
@@ -227,13 +229,14 @@ const db = {
   },
 
   async deleteUser(uId) {
+    const upperUid = uId.toUpperCase();
     if (USE_DATABASE && sql) {
       const request = new sql.Request();
-      request.input('uId', sql.Char(5), uId);
+      request.input('uId', sql.Char(5), upperUid);
       await request.query('DELETE FROM USERS WHERE uId = @uId');
       return true;
     } else {
-      const idx = USERS.findIndex(u => u.uId === uId);
+      const idx = USERS.findIndex(u => u.uId === upperUid);
       if (idx === -1) throw new Error('User not found');
       USERS.splice(idx, 1);
       return true;
@@ -268,7 +271,24 @@ const db = {
 
   async addService(service) {
     const { no, sId, uId, desc } = service;
+    const upperUid = uId.toUpperCase();
     if (USE_DATABASE && sql) {
+      // 1. 驗證會員是否存在
+      const userCheck = new sql.Request();
+      userCheck.input('uId', sql.Char(5), upperUid);
+      const userResult = await userCheck.query('SELECT 1 FROM USERS WHERE uId = @uId');
+      if (userResult.recordset.length === 0) {
+        throw new Error('會員編號不存在 (User ID does not exist)');
+      }
+
+      // 2. 驗證站點是否存在
+      const stationCheck = new sql.Request();
+      stationCheck.input('sId', sql.VarChar(20), sId);
+      const stationResult = await stationCheck.query('SELECT 1 FROM STATIONS WHERE sno = @sId');
+      if (stationResult.recordset.length === 0) {
+        throw new Error('站點不存在 (Station ID does not exist)');
+      }
+
       // 獲取目前最大的編號來自動產生流水號 (例如 F0005, F0006)
       const maxResult = await sql.query("SELECT MAX(formId) as maxId FROM SERVICES");
       let nextId = 'F0005';
@@ -281,19 +301,25 @@ const db = {
       request.input('formId', sql.Char(5), nextId);
       request.input('no', sql.Char(4), no);
       request.input('sId', sql.VarChar(20), sId);
-      request.input('uId', sql.Char(5), uId);
+      request.input('uId', sql.Char(5), upperUid);
       request.input('desc', sql.NVarChar(500), desc);
       request.input('status', sql.NVarChar(10), '處理中');
 
       await request.query('INSERT INTO SERVICES (formId, no, sId, uId, description, status) VALUES (@formId, @no, @sId, @uId, @desc, @status)');
       return nextId;
     } else {
+      if (!USERS.some(u => u.uId === upperUid)) {
+        throw new Error('會員編號不存在 (User ID does not exist)');
+      }
+      if (!STATIONS.some(s => s.sId === sId)) {
+        throw new Error('站點不存在 (Station ID does not exist)');
+      }
       const formId = 'F' + String(nextFormIdNumber++).padStart(4, '0');
       SERVICES.push({
         formId,
         no,
         sId,
-        uId,
+        uId: upperUid,
         desc,
         status: '處理中'
       });
@@ -527,6 +553,7 @@ app.post('/api/users', async (req, res) => {
 
     res.json({ success: true, message: "會員註冊成功" });
   } catch (err) {
+    console.error("新增會員失敗:", err);
     res.status(400).json({ success: false, message: err.message });
   }
 });
@@ -611,6 +638,7 @@ app.post('/api/services', async (req, res) => {
     const formId = await db.addService({ no, sId, uId, desc });
     res.json({ success: true, formId, message: "回報已送出" });
   } catch (err) {
+    console.error("提交客服回報失敗:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 });

@@ -107,6 +107,8 @@ const LANG_TEXT = {
   adminServicesTitle:     { zh: "客服回報總覽",  en: "Service Overview" },
   adminAddStation:    { zh: "+ 新增站點",       en: "+ Add Station" },
   adminAddUser:       { zh: "+ 新增會員",       en: "+ Add Member" },
+  adminAddService:    { zh: "+ 新增客服回報",   en: "+ Add Service Ticket" },
+  modalAddServiceTitle: { zh: "新增客服回報",   en: "Add Service Ticket" },
   importStationsTitle:{ zh: "批次匯入 YouBike 站點資料", en: "Batch Import YouBike Stations" },
   clearDbBtn:         { zh: "一鍵清空資料庫",   en: "Clear Database" },
 
@@ -793,14 +795,26 @@ function setupRecordFilters() {
 
 function populateStationSelect() {
   const sel = $("formSid");
-  // Remove old options except the first
-  while (sel.options.length > 1) sel.remove(1);
-  STATIONS.forEach(s => {
-    const opt = document.createElement("option");
-    opt.value = s.sId;
-    opt.textContent = `${s.sId} - ${s.name}`;
-    sel.appendChild(opt);
-  });
+  if (sel) {
+    while (sel.options.length > 1) sel.remove(1);
+    STATIONS.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s.sId;
+      opt.textContent = `${s.sId} - ${s.name}`;
+      sel.appendChild(opt);
+    });
+  }
+
+  const adminSel = $("adminFormSid");
+  if (adminSel) {
+    while (adminSel.options.length > 1) adminSel.remove(1);
+    STATIONS.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s.sId;
+      opt.textContent = `${s.sId} - ${s.name}`;
+      adminSel.appendChild(opt);
+    });
+  }
 }
 
 function renderServiceTable() {
@@ -831,7 +845,7 @@ function renderServiceTable() {
 function setupServiceForm() {
   $("serviceForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const uId  = $("formUid").value.trim();
+    const uId  = $("formUid").value.trim().toUpperCase();
     const sId  = $("formSid").value;
     const no   = $("formNo").value;
     const type = $("formType").value;
@@ -839,6 +853,11 @@ function setupServiceForm() {
 
     if (!uId || !sId || !no || !type || !desc) {
       showToast(currentLang === "en" ? "Please fill in all required fields" : "請填寫所有必填欄位", "error");
+      return;
+    }
+
+    if (!USERS.some(u => u.uId === uId)) {
+      showToast(currentLang === "en" ? "Member ID does not exist" : "會員編號不存在", "error");
       return;
     }
 
@@ -855,6 +874,63 @@ function setupServiceForm() {
         await fetchAllData();
         renderServiceTable();
         renderAdminServiceTable();   // sync admin table
+      } else {
+        showToast(res.message, "error");
+      }
+    } catch (err) {
+      // 錯誤已在 apiFetch 處理
+    }
+  });
+}
+
+function setupAdminServiceForm() {
+  const addBtn = $("adminAddServiceBtn");
+  if (!addBtn) return;
+
+  addBtn.addEventListener("click", () => {
+    $("adminServiceForm").reset();
+    populateStationSelect();
+    $("serviceAddModal").classList.add("active");
+  });
+
+  $("serviceAddModalClose").addEventListener("click", () => $("serviceAddModal").classList.remove("active"));
+  $("adminServiceCancel").addEventListener("click", () => $("serviceAddModal").classList.remove("active"));
+  $("serviceAddModal").addEventListener("click", (e) => {
+    if (e.target.id === "serviceAddModal") $("serviceAddModal").classList.remove("active");
+  });
+
+  $("adminServiceForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const uId  = $("adminFormUid").value.trim().toUpperCase();
+    const sId  = $("adminFormSid").value;
+    const no   = $("adminFormNo").value;
+    const type = $("adminFormType").value;
+    const desc = $("adminFormDesc").value.trim();
+
+    if (!uId || !sId || !no || !type || !desc) {
+      showToast(currentLang === "en" ? "Please fill in all required fields" : "請填寫所有必填欄位", "error");
+      return;
+    }
+
+    if (!USERS.some(u => u.uId === uId)) {
+      showToast(currentLang === "en" ? "Member ID does not exist" : "會員編號不存在", "error");
+      return;
+    }
+
+    try {
+      const res = await apiFetch(`/api/services`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ no, sId, uId, desc: `[${type}] ${desc}` })
+      });
+
+      if (res.success) {
+        showToast(currentLang === "en" ? "Service ticket created successfully" : "客服回報已新增成功", "success");
+        e.target.reset();
+        $("serviceAddModal").classList.remove("active");
+        await fetchAllData();
+        renderServiceTable();
+        renderAdminServiceTable();
       } else {
         showToast(res.message, "error");
       }
@@ -991,10 +1067,12 @@ function openEditStationModal(sId) {
     $("editBikeCount").value  = s.bikeCount;
     $("editEmptySlots").value = s.emptySlots;
     $("editSid").disabled = true;   // sId is not editable
+    $("editName").disabled = true;  // 站名不可編輯 (如要求)
   } else {
     title.textContent = currentLang === "en" ? "Add Station" : "新增站點";
     $("stationEditForm").reset();
     $("editSid").disabled = false;
+    $("editName").disabled = false;
   }
   $("stationEditModal").classList.add("active");
 }
@@ -1044,9 +1122,9 @@ function setupStationEdit() {
       return;
     }
 
-    // Validate: sId must be 5 chars (CHAR(5)), counts non-negative
-    if (sId.length !== 5) {
-      showToast(T ? "Station ID must be 5 characters" : "站號必須為 5 個字元", "error");
+    // Validate: sId length must not exceed 20 characters (supporting YouBike formats), counts non-negative
+    if (sId.length > 20) {
+      showToast(T ? "Station ID cannot exceed 20 characters" : "站號長度不能超過 20 個字元", "error");
       return;
     }
     if (bikeCount < 0 || emptySlots < 0) {
@@ -1258,7 +1336,7 @@ function setupUserEdit() {
 
   $("userEditForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const uId        = $("editUid").value.trim();
+    const uId        = $("editUid").value.trim().toUpperCase();
     const name       = $("editUserName").value.trim();
     const gender     = $("editGender").value;
     const rentCount  = parseInt($("editRentCount").value, 10);
@@ -1371,6 +1449,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   populateStationSelect();
   renderServiceTable();
   setupServiceForm();
+  setupAdminServiceForm();
 
   // Dashboard
   renderDashboard();

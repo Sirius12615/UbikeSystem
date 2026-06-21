@@ -436,7 +436,10 @@
       <!-- Tab: Service Management -->
       <div class="tab-content" id="tab-serviceManage">
         <div class="card">
-          <h3 data-i18n="adminServicesTitle">客服回報總覽</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 data-i18n="adminServicesTitle" style="margin: 0;">客服回報總覽</h3>
+            <button class="btn btn-primary" id="adminAddServiceBtn" data-i18n="adminAddService">+ 新增客服回報</button>
+          </div>
           <div class="table-wrapper">
             <table class="data-table">
               <thead>
@@ -551,6 +554,54 @@
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" id="userEditCancel" data-i18n="btnCancel">取消</button>
           <button type="submit" class="btn btn-primary" data-i18n="btnSave">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========== Modal: Add Service Ticket ========== -->
+  <div class="modal-mask" id="serviceAddModal">
+    <div class="modal">
+      <button class="modal-close" id="serviceAddModalClose">×</button>
+      <h2 id="serviceAddModalTitle" data-i18n="modalAddServiceTitle">新增客服回報</h2>
+      <form id="adminServiceForm">
+        <div class="form-row">
+          <label><span data-i18n="thUserId">會員編號</span> <span class="required">*</span></label>
+          <input type="text" id="adminFormUid" placeholder="例：U0001" required />
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="formStationLabel">站點</span> <span class="required">*</span></label>
+          <select id="adminFormSid" required>
+            <option value="" data-i18n="formSelectStation">請選擇站點</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="thCaseNo">案件編號</span> <span class="required">*</span></label>
+          <select id="adminFormNo" required>
+            <option value="" data-i18n="formSelectCase">請選擇案件編號</option>
+            <option value="N001">N001</option>
+            <option value="N002">N002</option>
+            <option value="N003">N003</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="formTypeLabel">問題類型</span> <span class="required">*</span></label>
+          <select id="adminFormType" required>
+            <option value="" data-i18n="formSelectType">請選擇問題類型</option>
+            <option value="自行車故障" data-i18n="issueBikeBroken">自行車故障</option>
+            <option value="無法租借" data-i18n="issueCannotRent">無法租借</option>
+            <option value="無法歸還" data-i18n="issueCannotReturn">無法歸還</option>
+            <option value="App 問題" data-i18n="issueAppProblem">App 問題</option>
+            <option value="其他" data-i18n="issueOther">其他</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="thDescription">問題描述</span> <span class="required">*</span></label>
+          <textarea id="adminFormDesc" rows="4" data-i18n-placeholder="formDescPlaceholder" placeholder="請詳細描述您遇到的問題..." required></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" id="adminServiceCancel" data-i18n="btnCancel">取消</button>
+          <button type="submit" class="btn btn-primary" data-i18n="formSubmit">送出回報</button>
         </div>
       </form>
     </div>
