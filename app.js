@@ -19,6 +19,12 @@ const LANG_TEXT = {
   btnRegister:    { zh: "加入會員",       en: "Join" },
   btnCancel:      { zh: "取消",           en: "Cancel" },
   btnSave:        { zh: "儲存",           en: "Save" },
+  modalLoginTitle: { zh: "系統登入",      en: "System Login" },
+  memberAccountLabel: { zh: "會員帳號",   en: "Member Account" },
+  memberPasswordLabel: { zh: "會員密碼",   en: "Member Password" },
+  adminAccountLabel: { zh: "管理員帳號",  en: "Admin Account" },
+  adminPasswordLabel: { zh: "管理員密碼", en: "Admin Password" },
+  btnSubmitLogin:  { zh: "登入",           en: "Login" },
   roleGuest:      { zh: "訪客",           en: "Guest" },
   roleMember:     { zh: "會員",           en: "Member" },
   roleAdmin:      { zh: "管理員",         en: "Admin" },
@@ -124,6 +130,10 @@ const LANG_TEXT = {
   bikeSearchPlaceholder:   { zh: "搜尋車輛編號或車型",           en: "Search bike ID or model" },
   recordSearchPlaceholder: { zh: "搜尋會員編號或車輛編號",       en: "Search user ID or bike ID" },
   formDescPlaceholder:     { zh: "請詳細描述您遇到的問題...",     en: "Please describe the issue in detail..." },
+  authUidPlaceholder:      { zh: "請輸入會員編號",               en: "Enter Member ID" },
+  authUidPassPlaceholder:  { zh: "請輸入密碼",                   en: "Enter Password" },
+  authAdminUserPlaceholder: { zh: "請輸入管理員帳號",             en: "Enter Admin Account" },
+  authAdminPassPlaceholder: { zh: "請輸入密碼",                   en: "Enter Password" },
 
   // Dashboard
   dashBikesChartTitle: { zh: "各站點自行車數量比較",  en: "Bikes per Station" },
@@ -230,6 +240,7 @@ function applyI18n() {
     if (btn.dataset.lang === currentLang) btn.classList.add("active");
     else btn.classList.remove("active");
   });
+  updateRoleSwitchUI();
 }
 
 // Switch language: re-render all tables to update badges, status, etc.
@@ -313,10 +324,10 @@ async function fetchAllData() {
 const $ = (id) => document.getElementById(id);
 
 // Show toast notification (success/error)
-function showToast(message, type = "success") {
+function showToast(message, type = "success", isLarge = false) {
   const toast = $("toast");
   toast.textContent = message;
-  toast.className = "toast show " + type;
+  toast.className = "toast show " + type + (isLarge ? " large" : "");
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => toast.classList.remove("show"), 2400);
 }
@@ -380,6 +391,83 @@ function setupNavigation() {
 
 // Role switch (Guest / Member / Admin) – controls visible menu items
 let currentRole = "guest";   // guest | member | admin
+let loggedMemberId = null;
+
+function updateRoleSwitchUI() {
+  const T = currentLang === "en";
+  document.querySelectorAll("#roleSwitch .role-btn").forEach(btn => {
+    if (btn.dataset.role === currentRole) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+
+  const loginBtn = $("loginBtn");
+  if (loginBtn) {
+    if (currentRole === "guest") {
+      loginBtn.textContent = T ? "Member Login" : "會員登入";
+    } else if (currentRole === "member") {
+      const user = USERS.find(u => u.uId === loggedMemberId);
+      const name = user ? user.name : loggedMemberId;
+      loginBtn.textContent = T ? `Logout (${name})` : `登出 (${name})`;
+    } else if (currentRole === "admin") {
+      loginBtn.textContent = T ? "Master (Logout)" : "Master(登出)";
+    }
+  }
+}
+
+function switchRoleTo(role, bypassPrompt = false) {
+  const T = currentLang === "en";
+  if (role === currentRole && !bypassPrompt) return;
+
+  if (role === "guest") {
+    currentRole = "guest";
+    loggedMemberId = null;
+    updateRoleSwitchUI();
+    applyRoleAccess();
+    showToast(T ? "Logged out" : "已登出", "success");
+    navigateTo("home");
+    return;
+  }
+
+  if (role === "member") {
+    openAuthModal("member");
+    return;
+  }
+
+  if (role === "admin") {
+    openAuthModal("admin");
+    return;
+  }
+}
+
+let currentAuthTab = "member"; // member | admin
+
+function openAuthModal(tab = "member") {
+  currentAuthTab = tab;
+  $("authForm").reset();
+  
+  // Update tab buttons style
+  document.querySelectorAll("#authTabs .tab-btn").forEach(btn => {
+    if (btn.dataset.authTab === currentAuthTab) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+
+  // Toggle fields visibility
+  if (currentAuthTab === "member") {
+    $("authMemberFields").style.display = "block";
+    $("authAdminFields").style.display = "none";
+  } else {
+    $("authMemberFields").style.display = "none";
+    $("authAdminFields").style.display = "block";
+  }
+
+  $("authModal").classList.add("active");
+}
 
 // Access rights per role: each nav item has data-nav attribute
 const ROLE_ACCESS = {
@@ -402,25 +490,8 @@ function applyRoleAccess() {
 function setupRoleSwitch() {
   document.querySelectorAll("#roleSwitch .role-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll("#roleSwitch .role-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      currentRole = btn.dataset.role;
-      const roleLabel = btn.dataset.role === "guest"
-        ? (currentLang === "en" ? "Guest" : "訪客")
-        : btn.dataset.role === "member"
-          ? (currentLang === "en" ? "Member" : "會員")
-          : (currentLang === "en" ? "Admin" : "管理員");
-      showToast(currentLang === "en"
-        ? `Switched to "${roleLabel}" mode`
-        : `已切換為「${roleLabel}」模式`, "success");
-
-      // Apply access rights
-      applyRoleAccess();
-
-      // Auto-navigate to a sensible page
-      if (currentRole === "admin") navigateTo("admin");
-      else if (currentRole === "guest") navigateTo("home");
-      else navigateTo("users");
+      const targetRole = btn.dataset.role;
+      switchRoleTo(targetRole);
     });
   });
 }
@@ -434,12 +505,90 @@ function setupMobileMenu() {
 
 // Login / Register buttons (demo only)
 function setupAuthButtons() {
-  $("loginBtn").addEventListener("click", () => showToast(
-    currentLang === "en" ? "Login is a demo — try U0001" : "登入功能為示意，請輸入 U0001 體驗"
-  ));
-  $("registerBtn").addEventListener("click", () => showToast(
-    currentLang === "en" ? "Registration is a demo" : "註冊功能為示意", "success"
-  ));
+  // Toggle between tabs inside the auth modal
+  document.querySelectorAll("#authTabs .tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      openAuthModal(btn.dataset.authTab);
+    });
+  });
+
+  // Close/Cancel auth modal
+  $("authModalClose").addEventListener("click", () => $("authModal").classList.remove("active"));
+  $("authCancel").addEventListener("click", () => $("authModal").classList.remove("active"));
+  $("authModal").addEventListener("click", (e) => {
+    if (e.target.id === "authModal") $("authModal").classList.remove("active");
+  });
+
+  // Login button in header
+  $("loginBtn").addEventListener("click", () => {
+    if (currentRole === "guest") {
+      switchRoleTo("member");
+    } else {
+      switchRoleTo("guest");
+    }
+  });
+
+  // Register button in header
+  $("registerBtn").addEventListener("click", () => {
+    openEditUserModal(null);
+  });
+
+  // Auth form submit
+  $("authForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const T = currentLang === "en";
+
+    if (currentAuthTab === "member") {
+      const uId = $("authUid").value.trim().toUpperCase();
+      const uIdPass = $("authUidPass").value.trim().toUpperCase();
+      if (!uId || !uIdPass) {
+        showToast(T ? "Please enter account and password" : "請輸入帳號與密碼", "error");
+        return;
+      }
+      if (uId !== uIdPass) {
+        showToast(T ? "Account and password must be identical" : "帳號與密碼必須相同", "error");
+        return;
+      }
+      const user = USERS.find(u => u.uId === uId);
+      if (user) {
+        currentRole = "member";
+        loggedMemberId = uId;
+        updateRoleSwitchUI();
+        applyRoleAccess();
+        showToast(T ? `Welcome back, ${user.name}!` : `登入成功，歡迎 ${user.name}！`, "success");
+        $("authModal").classList.remove("active");
+        navigateTo("home");
+      } else {
+        showToast(T ? "Member ID does not exist" : "會員編號不存在", "error");
+      }
+    } else {
+      const account = $("authAdminUser").value.trim().toUpperCase();
+      const password = $("authAdminPass").value;
+
+      if (!account || !password) {
+        showToast(T ? "Please enter account and password" : "請輸入帳號與密碼", "error");
+        return;
+      }
+
+      if (account !== "D1348788") {
+        showToast(T ? "Incorrect account" : "帳號錯誤", "error");
+        return;
+      }
+
+      if (password !== "8788") {
+        showToast(T ? "Incorrect password" : "密碼錯誤", "error");
+        return;
+      }
+
+      currentRole = "admin";
+      loggedMemberId = null;
+      updateRoleSwitchUI();
+      applyRoleAccess();
+      showToast(T ? "Are you my Master?" : "你是我的Master嗎？", "success", true);
+      $("authModal").classList.remove("active");
+      navigateTo("admin");
+    }
+  });
 }
 
 /* ============================================

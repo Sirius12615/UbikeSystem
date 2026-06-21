@@ -33,7 +33,7 @@
           <button class="role-btn" data-role="member" data-i18n="roleMember">會員</button>
           <button class="role-btn" data-role="admin" data-i18n="roleAdmin">管理員</button>
         </div>
-        <button class="btn btn-ghost" id="loginBtn" data-i18n="btnLogin">會員登入</button>
+        <button class="btn btn-ghost" id="loginBtn">會員登入</button>
         <button class="btn btn-outline" id="registerBtn" data-i18n="btnRegister">加入會員</button>
         <div class="lang-switch" id="langSwitch">
           <button class="lang active" type="button" data-lang="zh">中文</button>
@@ -602,6 +602,51 @@
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" id="adminServiceCancel" data-i18n="btnCancel">取消</button>
           <button type="submit" class="btn btn-primary" data-i18n="formSubmit">送出回報</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========== Modal: Authentication (Login) ========== -->
+  <div class="modal-mask" id="authModal">
+    <div class="modal" style="max-width: 400px;">
+      <button class="modal-close" id="authModalClose">×</button>
+      <h2 id="authModalTitle" data-i18n="modalLoginTitle" style="margin-bottom: 16px; text-align: center;">系統登入</h2>
+      
+      <!-- Tabs to switch between Member and Admin login -->
+      <div class="admin-tabs" id="authTabs" style="margin-bottom: 20px;">
+        <button class="tab-btn active" data-auth-tab="member" data-i18n="roleMember">會員</button>
+        <button class="tab-btn" data-auth-tab="admin" data-i18n="roleAdmin">管理員</button>
+      </div>
+
+      <form id="authForm">
+        <!-- Member Login Fields -->
+        <div id="authMemberFields">
+          <div class="form-row">
+            <label><span data-i18n="memberAccountLabel">會員帳號</span> <span class="required">*</span></label>
+            <input type="text" id="authUid" data-i18n-placeholder="authUidPlaceholder" placeholder="請輸入會員編號" />
+          </div>
+          <div class="form-row">
+            <label><span data-i18n="memberPasswordLabel">會員密碼</span> <span class="required">*</span></label>
+            <input type="password" id="authUidPass" data-i18n-placeholder="authUidPassPlaceholder" placeholder="請輸入密碼" />
+          </div>
+        </div>
+
+        <!-- Admin Login Fields -->
+        <div id="authAdminFields" style="display: none;">
+          <div class="form-row">
+            <label><span data-i18n="adminAccountLabel">管理員帳號</span> <span class="required">*</span></label>
+            <input type="text" id="authAdminUser" data-i18n-placeholder="authAdminUserPlaceholder" placeholder="請輸入管理員帳號" />
+          </div>
+          <div class="form-row">
+            <label><span data-i18n="adminPasswordLabel">管理員密碼</span> <span class="required">*</span></label>
+            <input type="password" id="authAdminPass" data-i18n-placeholder="authAdminPassPlaceholder" placeholder="請輸入密碼" />
+          </div>
+        </div>
+
+        <div class="form-actions" style="margin-top: 24px;">
+          <button type="button" class="btn btn-ghost" id="authCancel" data-i18n="btnCancel">取消</button>
+          <button type="submit" class="btn btn-primary" data-i18n="btnSubmitLogin">登入</button>
         </div>
       </form>
     </div>

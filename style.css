@@ -809,7 +809,7 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   font-size: 0.95rem;
   opacity: 0;
   pointer-events: none;
-  transition: all 0.3s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
   z-index: 2000;
 }
 .toast.show {
@@ -818,6 +818,17 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 }
 .toast.error { background: var(--danger); }
 .toast.success { background: var(--primary-dark); }
+.toast.large {
+  font-size: 1.425rem;
+  padding: 18px 36px;
+  border-radius: 36px;
+  transform: translateX(-50%) translateY(75px);
+  background: var(--warning);
+  color: #1F2937;
+}
+.toast.large.show {
+  transform: translateX(-50%) translateY(0);
+}
 
 /* --- Footer --- */
 .site-footer {
