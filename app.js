@@ -107,6 +107,7 @@ const LANG_TEXT = {
   adminServicesTitle:     { zh: "客服回報總覽",  en: "Service Overview" },
   adminAddStation:    { zh: "+ 新增站點",       en: "+ Add Station" },
   adminAddUser:       { zh: "+ 新增會員",       en: "+ Add Member" },
+  importStationsTitle:{ zh: "批次匯入 YouBike 站點資料", en: "Batch Import YouBike Stations" },
 
   // Modal
   modalCurrentBikes:  { zh: "目前可租車輛",     en: "Current Available Bikes" },
@@ -1315,6 +1316,15 @@ function setupUserEdit() {
   });
 }
 
+async function fetchStationsFromServer() {
+  await fetchAllData();
+  renderAdminStationTable();
+  renderStationTable();
+  populateStationSelect();
+  renderHomeStats();
+  renderDashboard();
+}
+
 /* ============================================
    11. INIT
    ============================================ */
@@ -1371,6 +1381,101 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupAdminTabs();
   renderAdminUserTable();
   setupUserEdit();
+
+  // CSV 欄位解析器：正確處理被雙引號包覆且內含逗號的欄位 (如英文地址)
+  function parseCsvLine(text) {
+    const result = [];
+    let cell = '';
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(cell.trim().replace(/^"|"$/g, '')); // 去除空白並移除首尾的雙引號
+        cell = '';
+      } else {
+        cell += char;
+      }
+    }
+    result.push(cell.trim().replace(/^"|"$/g, ''));
+    return result;
+  }
+
+  // 批次匯入 CSV 監聽器
+  document.getElementById('uploadCsvBtn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('csvFileInput');
+    if (fileInput.files.length === 0) {
+      showToast("請先選取新北市 YouBike CSV 檔案", "error");
+      return;
+    }
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    // 開始讀取檔案內容
+    reader.onload = async function(e) {
+      const text = e.target.result;
+      const lines = text.split('\n');
+      
+      const stationsData = [];
+
+      // 從第二行 (idx = 1) 開始遍歷所有資料列
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue; // 跳過空白行
+        
+        const currentline = parseCsvLine(lines[i]);
+        
+        // 依據新北市 CSV 的欄位順序，精準捕捉資料
+        if (currentline.length >= 18) {
+          stationsData.push({
+            scity:        currentline[0].trim(),
+            scityen:      currentline[1].trim(),
+            sna:          currentline[2].trim(),
+            sarea:        currentline[3].trim(),
+            ar:           currentline[4].trim(),
+            snaen:        currentline[5].trim(),
+            sareaen:      currentline[6].trim(),
+            aren:         currentline[7].trim(),
+            sno:          currentline[8].trim(),
+            tot_quantity: parseInt(currentline[9], 10) || 0,
+            sbi_quantity: parseInt(currentline[10], 10) || 0,
+            mday:         currentline[11].trim(),
+            lat:          parseFloat(currentline[12]) || 0,
+            lng:          parseFloat(currentline[13]) || 0,
+            bemp:         parseInt(currentline[14], 10) || 0,
+            act:          parseInt(currentline[15], 10) || 0,
+            yb2_quantity: parseInt(currentline[16], 10) || 0,
+            eyb_quantity: parseInt(currentline[17], 10) || 0
+          });
+        }
+      }
+
+      // 發送給後端 API
+      showToast("正在傳送 " + stationsData.length + " 筆站點資料至雲端資料庫，請稍候...");
+      try {
+        const response = await fetch('/api/stations/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stations: stationsData }) // 打包送出
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          showToast(`成功匯入 ${result.count} 筆新北市即時站點資料！`, "success");
+          // 重新呼叫前端載入函式，重新撈取資料庫並更新畫面
+          if (typeof fetchStationsFromServer === "function") fetchStationsFromServer();
+        } else {
+          showToast("匯入失敗: " + result.message, "error");
+        }
+      } catch (err) {
+        showToast("連線後端發生錯誤: " + err.message, "error");
+      }
+    };
+
+    // 以 UTF-8 編碼讀取 CSV 文字
+    reader.readAsText(file, "UTF-8");
+  });
 
   console.log("🚲 智慧共享自行車系統已啟動，共 " + STATIONS.length + " 個站點、"
               + BIKES.length + " 台車輛、" + USERS.length + " 位會員。");

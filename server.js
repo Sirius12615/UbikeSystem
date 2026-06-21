@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3000;
 // 1. 中間件配置
 // ============================================
 app.use(cors()); // 允許跨網域存取 (CORS)
-app.use(express.json()); // 解析 JSON 格式的 Request Body
+app.use(express.json({ limit: '50mb' })); // 解析 JSON 格式的 Request Body (加大上限以支援千筆 CSV 上傳)
 
 // 提供前端靜態檔案服務 (方便本機直接訪問 http://localhost:3000 運行完整專案)
 app.use(express.static(__dirname));
@@ -66,17 +66,18 @@ let nextFormIdNumber = 5;
 // ============================================
 // 3. 第二階段：SQL Server / SSMS 連線設定
 // ============================================
-const USE_DATABASE = false; // 切換至 true 以連接實體資料庫 (需先 npm install mssql)
+const USE_DATABASE = true; // 切換至 true 以連接實體資料庫 (需先 npm install mssql)
 let sql = null;
 
 const dbConfig = {
-  user: process.env.DB_USER || 'sa',
-  password: process.env.DB_PASSWORD || 'YourStrongPassword123',
-  server: process.env.DB_SERVER || 'localhost',
-  database: process.env.DB_NAME || 'UbikeSystem',
+  user: process.env.DB_USER || 'db2_26',
+  password: process.env.DB_PASSWORD || 'db2_26',
+  server: process.env.DB_SERVER || '163.17.9.18',
+  database: process.env.DB_NAME || undefined, // 連線至該帳號的預設資料庫，或透過 DB_NAME 環境變數自訂
   options: {
-    encrypt: false, // 本機 SQL Server 開發一般設為 false
-    trustServerCertificate: true // 信任本機憑證
+    encrypt: true, // 使用選擇性加密
+    trustServerCertificate: true, // 信任自我簽署憑證 (self-signed certificate)
+    serverName: 'orcl1' // 憑證中的主機名稱
   }
 };
 
@@ -101,7 +102,7 @@ const db = {
   // --- 站點管理 (Stations) ---
   async getStations() {
     if (USE_DATABASE && sql) {
-      const result = await sql.query('SELECT * FROM STATIONS');
+      const result = await sql.query('SELECT sno AS sId, sna AS name, sbi_quantity AS bikeCount, bemp AS emptySlots FROM STATIONS');
       return result.recordset;
     }
     return STATIONS;
@@ -111,17 +112,18 @@ const db = {
     const { sId, name, bikeCount, emptySlots } = station;
     if (USE_DATABASE && sql) {
       const request = new sql.Request();
-      request.input('sId', sql.Char(5), sId);
-      request.input('name', sql.NVarChar(100), name);
-      request.input('bikeCount', sql.Int, bikeCount);
-      request.input('emptySlots', sql.Int, emptySlots);
+      request.input('sno', sql.VarChar(20), sId);
+      request.input('sna', sql.NVarChar(100), name);
+      request.input('sbi_quantity', sql.Int, bikeCount);
+      request.input('bemp', sql.Int, emptySlots);
+      request.input('tot_quantity', sql.Int, parseInt(bikeCount, 10) + parseInt(emptySlots, 10));
 
-      const check = await request.query('SELECT 1 FROM STATIONS WHERE sId = @sId');
+      const check = await request.query('SELECT 1 FROM STATIONS WHERE sno = @sno');
       if (check.recordset.length > 0) {
         throw new Error('Station ID already exists');
       }
 
-      await request.query('INSERT INTO STATIONS (sId, name, bikeCount, emptySlots) VALUES (@sId, @name, @bikeCount, @emptySlots)');
+      await request.query('INSERT INTO STATIONS (sno, sna, sbi_quantity, bemp, tot_quantity, act) VALUES (@sno, @sna, @sbi_quantity, @bemp, @tot_quantity, 1)');
       return true;
     } else {
       if (STATIONS.some(s => s.sId === sId)) {
@@ -136,11 +138,12 @@ const db = {
     const { name, bikeCount, emptySlots } = data;
     if (USE_DATABASE && sql) {
       const request = new sql.Request();
-      request.input('sId', sql.Char(5), sId);
-      request.input('name', sql.NVarChar(100), name);
-      request.input('bikeCount', sql.Int, bikeCount);
-      request.input('emptySlots', sql.Int, emptySlots);
-      await request.query('UPDATE STATIONS SET name = @name, bikeCount = @bikeCount, emptySlots = @emptySlots WHERE sId = @sId');
+      request.input('sno', sql.VarChar(20), sId);
+      request.input('sna', sql.NVarChar(100), name);
+      request.input('sbi_quantity', sql.Int, bikeCount);
+      request.input('bemp', sql.Int, emptySlots);
+      request.input('tot_quantity', sql.Int, parseInt(bikeCount, 10) + parseInt(emptySlots, 10));
+      await request.query('UPDATE STATIONS SET sna = @sna, sbi_quantity = @sbi_quantity, bemp = @bemp, tot_quantity = @tot_quantity WHERE sno = @sno');
       return true;
     } else {
       const station = STATIONS.find(s => s.sId === sId);
@@ -155,8 +158,8 @@ const db = {
   async deleteStation(sId) {
     if (USE_DATABASE && sql) {
       const request = new sql.Request();
-      request.input('sId', sql.Char(5), sId);
-      await request.query('DELETE FROM STATIONS WHERE sId = @sId');
+      request.input('sno', sql.VarChar(20), sId);
+      await request.query('DELETE FROM STATIONS WHERE sno = @sno');
       return true;
     } else {
       const idx = STATIONS.findIndex(s => s.sId === sId);
@@ -277,7 +280,7 @@ const db = {
       const request = new sql.Request();
       request.input('formId', sql.Char(5), nextId);
       request.input('no', sql.Char(4), no);
-      request.input('sId', sql.Char(5), sId);
+      request.input('sId', sql.VarChar(20), sId);
       request.input('uId', sql.Char(5), uId);
       request.input('desc', sql.NVarChar(500), desc);
       request.input('status', sql.NVarChar(10), '處理中');
@@ -309,6 +312,64 @@ const db = {
       if (!service) throw new Error('Service ticket not found');
       service.status = '已完成';
       return true;
+    }
+  },
+
+  async batchAddStations(stations) {
+    if (USE_DATABASE && sql) {
+      const pool = await sql.connect(dbConfig);
+      // 開啟一筆資料庫交易 (Transaction)，確保大筆資料輸入時的安全與速度
+      const transaction = new sql.Transaction(pool);
+      await transaction.begin();
+
+      try {
+        for (const s of stations) {
+          const request = new sql.Request(transaction);
+          request.input('sno', sql.VarChar(20), s.sno);
+          request.input('scity', sql.NVarChar(20), s.scity);
+          request.input('scityen', sql.VarChar(50), s.scityen);
+          request.input('sna', sql.NVarChar(100), s.sna);
+          request.input('sarea', sql.NVarChar(50), s.sarea);
+          request.input('ar', sql.NVarChar(200), s.ar);
+          request.input('snaen', sql.VarChar(150), s.snaen);
+          request.input('sareaen', sql.VarChar(50), s.sareaen);
+          request.input('aren', sql.VarChar(250), s.aren);
+          request.input('tot_quantity', sql.Int, s.tot_quantity);
+          request.input('sbi_quantity', sql.Int, s.sbi_quantity);
+          request.input('mday', sql.VarChar(20), s.mday);
+          request.input('lat', sql.Float, s.lat);
+          request.input('lng', sql.Float, s.lng);
+          request.input('bemp', sql.Int, s.bemp);
+          request.input('act', sql.Int, s.act);
+          request.input('yb2_quantity', sql.Int, s.yb2_quantity);
+          request.input('eyb_quantity', sql.Int, s.eyb_quantity);
+
+          // 若站號重複則更新，不重複則插入 (UPSERT 語法)
+          await request.query(`
+            IF EXISTS (SELECT 1 FROM STATIONS WHERE sno = @sno)
+            BEGIN
+              UPDATE STATIONS SET 
+                sbi_quantity = @sbi_quantity, bemp = @bemp, mday = @mday,
+                yb2_quantity = @yb2_quantity, eyb_quantity = @eyb_quantity
+              WHERE sno = @sno
+            END
+            ELSE
+            BEGIN
+              INSERT INTO STATIONS (sno, scity, scityen, sna, sarea, ar, snaen, sareaen, aren, tot_quantity, sbi_quantity, mday, lat, lng, bemp, act, yb2_quantity, eyb_quantity)
+              VALUES (@sno, @scity, @scityen, @sna, @sarea, @ar, @snaen, @sareaen, @aren, @tot_quantity, @sbi_quantity, @mday, @lat, @lng, @bemp, @act, @yb2_quantity, @eyb_quantity)
+            END
+          `);
+        }
+        await transaction.commit(); // 認可交易，真正寫入硬碟
+        return stations.length;
+      } catch (err) {
+        await transaction.rollback(); // 發生任何錯誤立刻還原，防止髒資料
+        throw err;
+      }
+    } else {
+      // 記憶體模式下直接取代暫存變數
+      STATIONS = stations.map(s => ({ sId: s.sno, name: s.sna, bikeCount: s.sbi_quantity, emptySlots: s.bemp }));
+      return STATIONS.length;
     }
   }
 };
@@ -523,6 +584,22 @@ app.put('/api/services/:formId/resolve', async (req, res) => {
     await db.resolveService(formId);
     res.json({ success: true, status: "已完成", message: "案件已結案" });
   } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 4. 批次上傳 CSV 轉換後的 JSON 資料
+app.post('/api/stations/batch', async (req, res) => {
+  try {
+    const { stations } = req.body;
+    if (!stations || !Array.isArray(stations)) {
+      return res.status(400).json({ success: false, message: "無效的資料格式" });
+    }
+
+    const insertedCount = await db.batchAddStations(stations);
+    res.json({ success: true, count: insertedCount, message: "CSV 批次匯入成功" });
+  } catch (err) {
+    console.error("CSV 批次匯入失敗:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 });

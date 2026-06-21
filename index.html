@@ -374,6 +374,14 @@
 
       <!-- Tab: Station Management -->
       <div class="tab-content active" id="tab-stationManage">
+        <div class="card" style="margin-bottom: 20px;">
+          <h3 data-i18n="importStationsTitle">批次匯入 YouBike 站點資料</h3>
+          <div style="display: flex; gap: 12px; align-items: center; margin-top: 12px; flex-wrap: wrap;">
+            <input type="file" id="csvFileInput" accept=".csv" class="filter-input" style="padding: 6px 12px;" />
+            <button class="btn btn-primary" id="uploadCsvBtn">開始批次匯入</button>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-header">
             <h3 data-i18n="adminStationsListTitle">站點列表</h3>
