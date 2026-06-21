@@ -371,6 +371,44 @@ const db = {
       STATIONS = stations.map(s => ({ sId: s.sno, name: s.sna, bikeCount: s.sbi_quantity, emptySlots: s.bemp }));
       return STATIONS.length;
     }
+  },
+
+  async clearAllData() {
+    if (USE_DATABASE && sql) {
+      const pool = await sql.connect(dbConfig);
+      // 開啟一筆交易以確保多表刪除的一致性與安全
+      const transaction = new sql.Transaction(pool);
+      await transaction.begin();
+      try {
+        const request1 = new sql.Request(transaction);
+        await request1.query('DELETE FROM SERVICES');
+        
+        const request2 = new sql.Request(transaction);
+        await request2.query('DELETE FROM RENTAL_RECORDS');
+        
+        const request3 = new sql.Request(transaction);
+        await request3.query('DELETE FROM BIKES');
+        
+        const request4 = new sql.Request(transaction);
+        await request4.query('DELETE FROM USERS');
+        
+        const request5 = new sql.Request(transaction);
+        await request5.query('DELETE FROM STATIONS');
+        
+        await transaction.commit();
+        return true;
+      } catch (err) {
+        await transaction.rollback();
+        throw err;
+      }
+    } else {
+      STATIONS = [];
+      USERS = [];
+      BIKES = [];
+      RECORDS = [];
+      SERVICES = [];
+      return true;
+    }
   }
 };
 
@@ -600,6 +638,17 @@ app.post('/api/stations/batch', async (req, res) => {
     res.json({ success: true, count: insertedCount, message: "CSV 批次匯入成功" });
   } catch (err) {
     console.error("CSV 批次匯入失敗:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 5. 一鍵清空資料庫
+app.post('/api/clear', async (req, res) => {
+  try {
+    await db.clearAllData();
+    res.json({ success: true, message: "資料庫已成功清空" });
+  } catch (err) {
+    console.error("清空資料庫失敗:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 });

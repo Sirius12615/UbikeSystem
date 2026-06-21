@@ -108,6 +108,7 @@ const LANG_TEXT = {
   adminAddStation:    { zh: "+ 新增站點",       en: "+ Add Station" },
   adminAddUser:       { zh: "+ 新增會員",       en: "+ Add Member" },
   importStationsTitle:{ zh: "批次匯入 YouBike 站點資料", en: "Batch Import YouBike Stations" },
+  clearDbBtn:         { zh: "一鍵清空資料庫",   en: "Clear Database" },
 
   // Modal
   modalCurrentBikes:  { zh: "目前可租車輛",     en: "Current Available Bikes" },
@@ -1475,6 +1476,26 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 以 UTF-8 編碼讀取 CSV 文字
     reader.readAsText(file, "UTF-8");
+  });
+
+  // 一鍵清空資料庫監聽器
+  document.getElementById('clearDbBtn').addEventListener('click', async () => {
+    const confirmMsg = currentLang === "en"
+      ? "Are you sure you want to clear the entire database? This action cannot be undone!"
+      : "確定要清空整個資料庫的所有內容嗎？此動作無法復原！";
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const res = await apiFetch('/api/clear', { method: 'POST' });
+      if (res.success) {
+        showToast(currentLang === "en" ? "Database cleared successfully" : "資料庫已成功清空", "success");
+        await fetchStationsFromServer(); // 重新整理畫面
+      } else {
+        showToast(res.message, "error");
+      }
+    } catch (err) {
+      // 錯誤已在 apiFetch 處理
+    }
   });
 
   console.log("🚲 智慧共享自行車系統已啟動，共 " + STATIONS.length + " 個站點、"
