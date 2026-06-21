@@ -472,8 +472,8 @@ function openAuthModal(tab = "member") {
 
 // Access rights per role: each nav item has data-nav attribute
 const ROLE_ACCESS = {
-  guest:  ["home", "stations", "bikes"],
-  member: ["home", "stations", "users", "bikes", "records", "service", "dashboard"],
+  guest:  ["home", "stations"],
+  member: ["home", "stations", "users", "records", "service", "dashboard"],
   admin:  ["home", "stations", "users", "bikes", "records", "service", "dashboard", "admin"]
 };
 
@@ -488,6 +488,7 @@ function applyRoleAccess() {
   });
   renderUserTable();
   renderRecordTable();
+  renderServiceTable();
 }
 
 function setupRoleSwitch() {
@@ -1034,16 +1035,26 @@ function populateStationSelect() {
 
 function renderServiceTable() {
   const tbody = $("serviceTableBody");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
-  if (SERVICES.length === 0) {
+  let list = [];
+  if (currentRole === "admin") {
+    list = SERVICES;
+  } else if (currentRole === "member") {
+    list = SERVICES.filter(sv => sv.uId === loggedMemberId);
+  } else {
+    list = [];
+  }
+
+  if (list.length === 0) {
     tbody.innerHTML = `<tr><td colspan="6">
       <div class="empty-state"><div class="empty-state-icon">📭</div>${currentLang === "en" ? "No reports yet" : "目前沒有回報紀錄"}</div>
     </td></tr>`;
     return;
   }
 
-  SERVICES.forEach(sv => {
+  list.forEach(sv => {
     const info = STATUS_LABEL[sv.status];
     const tr = document.createElement("tr");
     tr.innerHTML = `
