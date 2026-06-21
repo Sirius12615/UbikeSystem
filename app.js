@@ -134,6 +134,7 @@ const LANG_TEXT = {
   authUidPassPlaceholder:  { zh: "請輸入密碼",                   en: "Enter Password" },
   authAdminUserPlaceholder: { zh: "請輸入管理員帳號",             en: "Enter Admin Account" },
   authAdminPassPlaceholder: { zh: "請輸入密碼",                   en: "Enter Password" },
+  caseNoPlaceholder:       { zh: "例：N001",                     en: "e.g. N001" },
 
   // Dashboard
   dashBikesChartTitle: { zh: "各站點自行車數量比較",  en: "Bikes per Station" },
@@ -584,7 +585,7 @@ function setupAuthButtons() {
       loggedMemberId = null;
       updateRoleSwitchUI();
       applyRoleAccess();
-      showToast(T ? "Are you my Master?" : "你是我的Master嗎？", "success", true);
+      showToast(T ? "Are you my Master?" : "你是我的Master嗎？", "warning", true);
       $("authModal").classList.remove("active");
       navigateTo("admin");
     }
@@ -996,7 +997,7 @@ function setupServiceForm() {
     e.preventDefault();
     const uId  = $("formUid").value.trim().toUpperCase();
     const sId  = $("formSid").value;
-    const no   = $("formNo").value;
+    const no   = $("formNo").value.trim().toUpperCase();
     const type = $("formType").value;
     const desc = $("formDesc").value.trim();
 
@@ -1052,7 +1053,7 @@ function setupAdminServiceForm() {
     e.preventDefault();
     const uId  = $("adminFormUid").value.trim().toUpperCase();
     const sId  = $("adminFormSid").value;
-    const no   = $("adminFormNo").value;
+    const no   = $("adminFormNo").value.trim().toUpperCase();
     const type = $("adminFormType").value;
     const desc = $("adminFormDesc").value.trim();
 

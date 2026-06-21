@@ -818,13 +818,14 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 }
 .toast.error { background: var(--danger); }
 .toast.success { background: var(--primary-dark); }
+.toast.warning { background: var(--warning); color: #1F2937; }
 .toast.large {
   font-size: 1.425rem;
   padding: 18px 36px;
   border-radius: 36px;
   transform: translateX(-50%) translateY(75px);
-  background: var(--warning);
-  color: #1F2937;
+  background: var(--warning) !important;
+  color: #1F2937 !important;
 }
 .toast.large.show {
   transform: translateX(-50%) translateY(0);
