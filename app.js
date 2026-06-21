@@ -486,6 +486,8 @@ function applyRoleAccess() {
       a.style.display = "none";
     }
   });
+  renderUserTable();
+  renderRecordTable();
 }
 
 function setupRoleSwitch() {
@@ -836,17 +838,48 @@ function renderUserTable() {
   if (!tbody) return;
   tbody.innerHTML = "";
 
-  const list = USERS.filter(u => {
-    const matchKw =
-      !currentUserKeyword ||
-      u.uId.toLowerCase().includes(currentUserKeyword.toLowerCase()) ||
-      u.name.toLowerCase().includes(currentUserKeyword.toLowerCase());
+  const filterBar = document.querySelector("#page-users .filter-bar");
+  const subEl = document.querySelector("#page-users .page-sub");
 
-    const st = getUserStatus(u);
-    const matchStatus = currentUserStatusFilter === "all" || st === currentUserStatusFilter;
+  let list = [];
 
-    return matchKw && matchStatus;
-  });
+  if (currentRole === "admin") {
+    if (filterBar) filterBar.style.display = "";
+    if (subEl) {
+      subEl.innerHTML = currentLang === "en"
+        ? "View all members' information and rental statistics."
+        : "查看所有會員的基本資料與租借紀錄統計";
+    }
+
+    list = USERS.filter(u => {
+      const matchKw =
+        !currentUserKeyword ||
+        u.uId.toLowerCase().includes(currentUserKeyword.toLowerCase()) ||
+        u.name.toLowerCase().includes(currentUserKeyword.toLowerCase());
+
+      const st = getUserStatus(u);
+      const matchStatus = currentUserStatusFilter === "all" || st === currentUserStatusFilter;
+
+      return matchKw && matchStatus;
+    });
+  } else if (currentRole === "member") {
+    if (filterBar) filterBar.style.display = "none";
+    if (subEl) {
+      subEl.innerHTML = currentLang === "en"
+        ? "View your information and rental statistics."
+        : "查看您的基本資料與租借紀錄統計";
+    }
+
+    list = USERS.filter(u => u.uId === loggedMemberId);
+  } else {
+    if (filterBar) filterBar.style.display = "none";
+    if (subEl) {
+      subEl.innerHTML = currentLang === "en"
+        ? "View members' information and rental statistics."
+        : "查看會員的基本資料與租借紀錄統計";
+    }
+    list = [];
+  }
 
   if (list.length === 0) {
     tbody.innerHTML = `<tr><td colspan="6">
@@ -900,13 +933,45 @@ let currentRecordKeyword = "";
 
 function renderRecordTable() {
   const tbody = $("recordTableBody");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
-  const list = RECORDS.filter(r => {
-    if (!currentRecordKeyword) return true;
-    const kw = currentRecordKeyword.toLowerCase();
-    return r.uId.toLowerCase().includes(kw) || r.bId.toLowerCase().includes(kw);
-  });
+  const filterBar = document.querySelector("#page-records .filter-bar");
+  const subEl = document.querySelector("#page-records .page-sub");
+
+  let list = [];
+
+  if (currentRole === "admin") {
+    if (filterBar) filterBar.style.display = "";
+    if (subEl) {
+      subEl.innerHTML = currentLang === "en"
+        ? "View rental and return history of members."
+        : "查看會員的租借與歸還歷史紀錄";
+    }
+
+    list = RECORDS.filter(r => {
+      if (!currentRecordKeyword) return true;
+      const kw = currentRecordKeyword.toLowerCase();
+      return r.uId.toLowerCase().includes(kw) || r.bId.toLowerCase().includes(kw);
+    });
+  } else if (currentRole === "member") {
+    if (filterBar) filterBar.style.display = "none";
+    if (subEl) {
+      subEl.innerHTML = currentLang === "en"
+        ? "View your rental and return history."
+        : "查看您的租借與歸還歷史紀錄";
+    }
+
+    list = RECORDS.filter(r => r.uId === loggedMemberId);
+  } else {
+    if (filterBar) filterBar.style.display = "none";
+    if (subEl) {
+      subEl.innerHTML = currentLang === "en"
+        ? "View rental and return history."
+        : "查看租借與歸還歷史紀錄";
+    }
+    list = [];
+  }
 
   if (list.length === 0) {
     tbody.innerHTML = `<tr><td colspan="5">
