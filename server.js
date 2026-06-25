@@ -252,6 +252,142 @@ const db = {
     return BIKES;
   },
 
+  async addBike(bike) {
+    const { bId, model, status, sId } = bike;
+    const upperBid = bId.toUpperCase();
+    const formattedSid = sId ? sId.trim().toUpperCase() : null;
+    
+    if (USE_DATABASE && sql) {
+      if (formattedSid) {
+        const stationCheck = new sql.Request();
+        stationCheck.input('sId', sql.VarChar(20), formattedSid);
+        const stationResult = await stationCheck.query('SELECT 1 FROM STATIONS WHERE sno = @sId');
+        if (stationResult.recordset.length === 0) {
+          throw new Error('站點不存在 (Station ID does not exist)');
+        }
+      }
+
+      const request = new sql.Request();
+      request.input('bId', sql.Char(5), upperBid);
+      const check = await request.query('SELECT 1 FROM BIKES WHERE bId = @bId');
+      if (check.recordset.length > 0) {
+        throw new Error('車輛編號已存在 (Bike ID already exists)');
+      }
+
+      request.input('model', sql.NVarChar(100), model);
+      request.input('status', sql.NVarChar(20), status);
+      request.input('sId', sql.VarChar(20), formattedSid || null);
+      await request.query('INSERT INTO BIKES (bId, model, status, sId) VALUES (@bId, @model, @status, @sId)');
+      return true;
+    } else {
+      if (formattedSid && !STATIONS.some(s => s.sId === formattedSid)) {
+        throw new Error('站點不存在 (Station ID does not exist)');
+      }
+      if (BIKES.some(b => b.bId === upperBid)) {
+        throw new Error('車輛編號已存在 (Bike ID already exists)');
+      }
+      BIKES.push({ bId: upperBid, model, status, sId: formattedSid || null });
+      return true;
+    }
+  },
+
+  async updateBike(bId, data) {
+    const { model, status, sId } = data;
+    const upperBid = bId.toUpperCase();
+    const formattedSid = sId ? sId.trim().toUpperCase() : null;
+
+    if (USE_DATABASE && sql) {
+      if (formattedSid) {
+        const stationCheck = new sql.Request();
+        stationCheck.input('sId', sql.VarChar(20), formattedSid);
+        const stationResult = await stationCheck.query('SELECT 1 FROM STATIONS WHERE sno = @sId');
+        if (stationResult.recordset.length === 0) {
+          throw new Error('站點不存在 (Station ID does not exist)');
+        }
+      }
+
+      const request = new sql.Request();
+      request.input('bId', sql.Char(5), upperBid);
+      request.input('model', sql.NVarChar(100), model);
+      request.input('status', sql.NVarChar(20), status);
+      request.input('sId', sql.VarChar(20), formattedSid || null);
+      await request.query('UPDATE BIKES SET model = @model, status = @status, sId = @sId WHERE bId = @bId');
+      return true;
+    } else {
+      if (formattedSid && !STATIONS.some(s => s.sId === formattedSid)) {
+        throw new Error('站點不存在 (Station ID does not exist)');
+      }
+      const bike = BIKES.find(b => b.bId === upperBid);
+      if (!bike) throw new Error('車輛不存在 (Bike not found)');
+      bike.model = model;
+      bike.status = status;
+      bike.sId = formattedSid || null;
+      return true;
+    }
+  },
+
+  async deleteBike(bId) {
+    const upperBid = bId.toUpperCase();
+    if (USE_DATABASE && sql) {
+      const request = new sql.Request();
+      request.input('bId', sql.Char(5), upperBid);
+      await request.query('DELETE FROM BIKES WHERE bId = @bId');
+      return true;
+    } else {
+      const idx = BIKES.findIndex(b => b.bId === upperBid);
+      if (idx === -1) throw new Error('車輛不存在 (Bike not found)');
+      BIKES.splice(idx, 1);
+      return true;
+    }
+  },
+
+  async batchAddBikes(bikes) {
+    if (USE_DATABASE && sql) {
+      const pool = await sql.connect(dbConfig);
+      const transaction = new sql.Transaction(pool);
+      await transaction.begin();
+      try {
+        for (const b of bikes) {
+          const request = new sql.Request(transaction);
+          const upperBid = b.bId.toUpperCase();
+          const formattedSid = b.sId ? b.sId.trim().toUpperCase() : null;
+          request.input('bId', sql.Char(5), upperBid);
+          request.input('model', sql.NVarChar(100), b.model);
+          request.input('status', sql.NVarChar(20), b.status);
+          request.input('sId', sql.VarChar(20), formattedSid || null);
+
+          await request.query(`
+            IF EXISTS (SELECT 1 FROM BIKES WHERE bId = @bId)
+            BEGIN
+              UPDATE BIKES SET model = @model, status = @status, sId = @sId WHERE bId = @bId
+            END
+            ELSE
+            BEGIN
+              INSERT INTO BIKES (bId, model, status, sId) VALUES (@bId, @model, @status, @sId)
+            END
+          `);
+        }
+        await transaction.commit();
+        return bikes.length;
+      } catch (err) {
+        await transaction.rollback();
+        throw err;
+      }
+    } else {
+      bikes.forEach(b => {
+        const upperBid = b.bId.toUpperCase();
+        const formattedSid = b.sId ? b.sId.trim().toUpperCase() : null;
+        const idx = BIKES.findIndex(x => x.bId === upperBid);
+        if (idx !== -1) {
+          BIKES[idx] = { bId: upperBid, model: b.model, status: b.status, sId: formattedSid || null };
+        } else {
+          BIKES.push({ bId: upperBid, model: b.model, status: b.status, sId: formattedSid || null });
+        }
+      });
+      return bikes.length;
+    }
+  },
+
   async getRecords() {
     if (USE_DATABASE && sql) {
       const result = await sql.query('SELECT * FROM RENTAL_RECORDS');
@@ -600,6 +736,82 @@ app.get('/api/bikes', async (req, res) => {
     const data = await db.getBikes();
     res.json(data);
   } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 新增單一自行車
+app.post('/api/bikes', async (req, res) => {
+  try {
+    const { bId, model, status, sId } = req.body;
+    if (!bId || !model || !status) {
+      return res.status(400).json({ success: false, message: "車輛編號、車型與狀態為必填欄位" });
+    }
+    if (bId.length !== 5 || !bId.toUpperCase().startsWith('B')) {
+      return res.status(400).json({ success: false, message: "車輛編號必須為 5 個字元且以 B 開頭 (例如 B0001)" });
+    }
+    if (!["Available", "Rented", "Repair"].includes(status)) {
+      return res.status(400).json({ success: false, message: "無效的車輛狀態" });
+    }
+    if (status === "Available" && !sId) {
+      return res.status(400).json({ success: false, message: "可租借車輛必須指定所在站點" });
+    }
+
+    await db.addBike({ bId, model, status, sId: sId || null });
+    res.json({ success: true, message: "自行車新增成功" });
+  } catch (err) {
+    console.error("新增自行車失敗:", err);
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// 修改自行車資料
+app.put('/api/bikes/:bId', async (req, res) => {
+  try {
+    const { bId } = req.params;
+    const { model, status, sId } = req.body;
+    if (!model || !status) {
+      return res.status(400).json({ success: false, message: "車型與狀態為必填欄位" });
+    }
+    if (!["Available", "Rented", "Repair"].includes(status)) {
+      return res.status(400).json({ success: false, message: "無效的車輛狀態" });
+    }
+    if (status === "Available" && !sId) {
+      return res.status(400).json({ success: false, message: "可租借車輛必須指定所在站點" });
+    }
+
+    await db.updateBike(bId, { model, status, sId: sId || null });
+    res.json({ success: true, message: "自行車資料更新成功" });
+  } catch (err) {
+    console.error("修改自行車失敗:", err);
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// 刪除特定自行車
+app.delete('/api/bikes/:bId', async (req, res) => {
+  try {
+    const { bId } = req.params;
+    await db.deleteBike(bId);
+    res.json({ success: true, message: "自行車已刪除" });
+  } catch (err) {
+    console.error("刪除自行車失敗:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 批次上傳自行車 CSV 轉換後的 JSON 資料
+app.post('/api/bikes/batch', async (req, res) => {
+  try {
+    const { bikes } = req.body;
+    if (!bikes || !Array.isArray(bikes)) {
+      return res.status(400).json({ success: false, message: "無效的資料格式" });
+    }
+
+    const insertedCount = await db.batchAddBikes(bikes);
+    res.json({ success: true, count: insertedCount, message: "自行車批次匯入成功" });
+  } catch (err) {
+    console.error("自行車批次匯入失敗:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 });

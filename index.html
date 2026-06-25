@@ -365,6 +365,7 @@
         <button class="tab-btn active" data-tab="stationManage" data-i18n="adminTabStations">站點管理</button>
         <button class="tab-btn" data-tab="userManage" data-i18n="adminTabUsers">會員資料管理</button>
         <button class="tab-btn" data-tab="serviceManage" data-i18n="adminTabServices">客服回報管理</button>
+        <button class="tab-btn" data-tab="bikeManage" data-i18n="adminTabBikes">自行車管理</button>
       </div>
 
       <!-- Tab: Station Management -->
@@ -449,6 +450,39 @@
                 </tr>
               </thead>
               <tbody id="adminServiceTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Bike Management -->
+      <div class="tab-content" id="tab-bikeManage">
+        <div class="card" style="margin-bottom: 20px;">
+          <h3 data-i18n="importBikesTitle">批次匯入自行車資料</h3>
+          <div style="display: flex; gap: 12px; align-items: center; margin-top: 12px; flex-wrap: wrap;">
+            <input type="file" id="bikeCsvFileInput" accept=".csv" class="filter-input" style="padding: 6px 12px;" />
+            <button class="btn btn-primary" id="uploadBikeCsvBtn">開始批次匯入</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3 data-i18n="adminBikesListTitle">自行車列表</h3>
+            <button class="btn btn-primary" id="addBikeBtn" data-i18n="adminAddBike">+ 新增自行車</button>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th data-i18n="thBikeId">車輛編號</th>
+                  <th data-i18n="thModel">車型</th>
+                  <th data-i18n="thCurrentStatus">目前狀態</th>
+                  <th data-i18n="thStation">所在站點</th>
+                  <th data-i18n="thAction">操作</th>
+                </tr>
+              </thead>
+              <tbody id="adminBikeTableBody"></tbody>
             </table>
           </div>
         </div>
@@ -592,6 +626,43 @@
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" id="adminServiceCancel" data-i18n="btnCancel">取消</button>
           <button type="submit" class="btn btn-primary" data-i18n="formSubmit">送出回報</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========== Modal: Add/Edit Bike ========== -->
+  <div class="modal-mask" id="bikeEditModal">
+    <div class="modal">
+      <button class="modal-close" id="bikeEditModalClose">×</button>
+      <h2 id="bikeEditModalTitle">新增自行車</h2>
+      <form id="bikeEditForm">
+        <div class="form-row">
+          <label><span data-i18n="thBikeId">車輛編號</span> <span class="required">*</span></label>
+          <input type="text" id="editBid" placeholder="例：B0001" required />
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="thModel">車型</span> <span class="required">*</span></label>
+          <input type="text" id="editBikeModel" required />
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="thCurrentStatus">目前狀態</span> <span class="required">*</span></label>
+          <select id="editBikeStatus" required>
+            <option value="" data-i18n="formSelectStatus">請選擇狀態</option>
+            <option value="Available" data-i18n="statusAvailable">可租借 (Available)</option>
+            <option value="Rented" data-i18n="statusRented">已租借 (Rented)</option>
+            <option value="Repair" data-i18n="statusRepair">維修中 (Repair)</option>
+          </select>
+        </div>
+        <div class="form-row" id="editBikeStationRow">
+          <label><span data-i18n="formStationLabel">站點</span> <span class="required" id="bikeStationRequired">*</span></label>
+          <select id="editBikeSid">
+            <option value="" data-i18n="formSelectStation">請選擇站點</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" id="bikeEditCancel" data-i18n="btnCancel">取消</button>
+          <button type="submit" class="btn btn-primary" data-i18n="btnSave">儲存</button>
         </div>
       </form>
     </div>

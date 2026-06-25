@@ -108,15 +108,24 @@ const LANG_TEXT = {
   adminTabStations:   { zh: "站點管理",         en: "Stations" },
   adminTabUsers:      { zh: "會員資料管理",     en: "Members" },
   adminTabServices:   { zh: "客服回報管理",     en: "Customer Service" },
+  adminTabBikes:      { zh: "自行車管理",       en: "Bikes" },
   adminStationsListTitle: { zh: "站點列表",      en: "Station List" },
   adminUsersListTitle:    { zh: "會員列表",      en: "Member List" },
   adminServicesTitle:     { zh: "客服回報總覽",  en: "Service Overview" },
+  adminBikesListTitle:    { zh: "自行車列表",    en: "Bike List" },
   adminAddStation:    { zh: "+ 新增站點",       en: "+ Add Station" },
   adminAddUser:       { zh: "+ 新增會員",       en: "+ Add Member" },
   adminAddService:    { zh: "+ 新增客服回報",   en: "+ Add Service Ticket" },
+  adminAddBike:       { zh: "+ 新增自行車",     en: "+ Add Bike" },
   modalAddServiceTitle: { zh: "新增客服回報",   en: "Add Service Ticket" },
   importStationsTitle:{ zh: "批次匯入 YouBike 站點資料", en: "Batch Import YouBike Stations" },
+  importBikesTitle:   { zh: "批次匯入自行車資料", en: "Batch Import Bikes" },
   clearDbBtn:         { zh: "一鍵清空資料庫",   en: "Clear Database" },
+  thBikeId:           { zh: "車輛編號",         en: "Bike ID" },
+  thModel:            { zh: "車型",             en: "Model" },
+  thCurrentStatus:    { zh: "目前狀態",         en: "Status" },
+  thStation:          { zh: "所在站點",         en: "Station" },
+  formSelectStatus:   { zh: "請選擇狀態",       en: "Select Status" },
 
   // Modal
   modalCurrentBikes:  { zh: "目前可租車輛",     en: "Current Available Bikes" },
@@ -259,6 +268,7 @@ function setLanguage(lang) {
   renderAdminStationTable();
   renderAdminUserTable();
   renderAdminServiceTable();
+  renderAdminBikeTable();
   renderDashboard();
 }
 
@@ -1031,6 +1041,17 @@ function populateStationSelect() {
       adminSel.appendChild(opt);
     });
   }
+
+  const bikeEditSel = $("editBikeSid");
+  if (bikeEditSel) {
+    while (bikeEditSel.options.length > 1) bikeEditSel.remove(1);
+    STATIONS.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s.sId;
+      opt.textContent = `${s.sId} - ${s.name}`;
+      bikeEditSel.appendChild(opt);
+    });
+  }
 }
 
 function renderServiceTable() {
@@ -1621,6 +1642,175 @@ function setupUserEdit() {
   });
 }
 
+// 10.5 Bicycle management (admin)
+let editingBikeId = null;   // null = adding new
+
+function renderAdminBikeTable() {
+  const tbody = $("adminBikeTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  BIKES.forEach(b => {
+    const info = STATUS_LABEL[b.status] || { badge: "", text: b.status };
+    const stationDisplay = b.sId ? `${getStationName(b.sId)} (${b.sId})` : "-";
+    
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${b.bId}</td>
+      <td>${b.model}</td>
+      <td><span class="badge ${info.badge}">${info[currentLang] || info.text || ""}</span></td>
+      <td>${stationDisplay}</td>
+      <td>
+        <button class="btn btn-sm btn-outline" data-edit-bike="${b.bId}">${currentLang === "en" ? "Edit" : "編輯"}</button>
+        <button class="btn btn-sm btn-danger" data-del-bike="${b.bId}">${currentLang === "en" ? "Delete" : "刪除"}</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Wire events
+  tbody.querySelectorAll("[data-edit-bike]").forEach(btn => {
+    btn.addEventListener("click", () => openEditBikeModal(btn.dataset.editBike));
+  });
+  tbody.querySelectorAll("[data-del-bike]").forEach(btn => {
+    btn.addEventListener("click", () => deleteBike(btn.dataset.delBike));
+  });
+}
+
+function openEditBikeModal(bId) {
+  editingBikeId = bId || null;
+  const title = $("bikeEditModalTitle");
+  
+  populateStationSelect();
+
+  if (bId) {
+    const b = BIKES.find(x => x.bId === bId);
+    title.textContent = currentLang === "en" ? "Edit Bike Status" : "修改自行車狀態";
+    $("editBid").value = b.bId;
+    $("editBikeModel").value = b.model;
+    $("editBikeStatus").value = b.status;
+    $("editBikeSid").value = b.sId || "";
+    $("editBid").disabled = true;
+    
+    toggleBikeStationRequired(b.status);
+  } else {
+    title.textContent = currentLang === "en" ? "Add Bike" : "新增自行車";
+    $("bikeEditForm").reset();
+    $("editBid").disabled = false;
+    toggleBikeStationRequired("");
+  }
+  $("bikeEditModal").classList.add("active");
+}
+
+function toggleBikeStationRequired(status) {
+  const stationInput = $("editBikeSid");
+  const requiredAsterisk = $("bikeStationRequired");
+  
+  if (status === "Available") {
+    stationInput.required = true;
+    if (requiredAsterisk) requiredAsterisk.style.display = "inline";
+  } else {
+    stationInput.required = false;
+    if (requiredAsterisk) requiredAsterisk.style.display = "none";
+  }
+}
+
+async function deleteBike(bId) {
+  const confirmMsg = currentLang === "en"
+    ? `Are you sure you want to delete bike ${bId}?`
+    : `確定要刪除車輛 ${bId} 嗎？`;
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    const res = await apiFetch(`/api/bikes/${bId}`, { method: 'DELETE' });
+    if (res.success) {
+      showToast(currentLang === "en" ? "Bike deleted" : "已刪除車輛", "success");
+      await fetchAllData();
+      renderAdminBikeTable();
+      renderBikeTable();
+      renderHomeStats();
+      renderDashboard();
+    } else {
+      showToast(res.message, "error");
+    }
+  } catch (err) {
+    // 錯誤已在 apiFetch 處理
+  }
+}
+
+function setupBikeEdit() {
+  $("addBikeBtn").addEventListener("click", () => openEditBikeModal(null));
+  $("bikeEditModalClose").addEventListener("click", () => $("bikeEditModal").classList.remove("active"));
+  $("bikeEditCancel").addEventListener("click", () => $("bikeEditModal").classList.remove("active"));
+  $("bikeEditModal").addEventListener("click", (e) => {
+    if (e.target.id === "bikeEditModal") $("bikeEditModal").classList.remove("active");
+  });
+
+  $("editBikeStatus").addEventListener("change", (e) => {
+    toggleBikeStationRequired(e.target.value);
+  });
+
+  $("bikeEditForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const bId = $("editBid").value.trim();
+    const model = $("editBikeModel").value.trim();
+    const status = $("editBikeStatus").value;
+    const sId = $("editBikeSid").value;
+
+    const T = currentLang === "en";
+    if (!bId || !model || !status) {
+      showToast(T ? "Please fill in all fields" : "請填寫完整資料", "error");
+      return;
+    }
+
+    if (bId.length !== 5 || !bId.toUpperCase().startsWith('B')) {
+      showToast(T ? "Bike ID must be 5 characters and start with B (e.g., B0001)" : "車輛編號必須為 5 個字元且以 B 開頭 (例如 B0001)", "error");
+      return;
+    }
+
+    if (status === "Available" && !sId) {
+      showToast(T ? "Available bikes must have a station" : "可租借車輛必須指定所在站點", "error");
+      return;
+    }
+
+    try {
+      if (editingBikeId) {
+        const res = await apiFetch(`/api/bikes/${editingBikeId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, status, sId: sId || null })
+        });
+        if (res.success) {
+          showToast(T ? "Bike updated" : "自行車資料已更新", "success");
+        } else {
+          showToast(res.message, "error");
+          return;
+        }
+      } else {
+        const res = await apiFetch(`/api/bikes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bId, model, status, sId: sId || null })
+        });
+        if (res.success) {
+          showToast(T ? "Bike added" : "已新增自行車", "success");
+        } else {
+          showToast(res.message, "error");
+          return;
+        }
+      }
+
+      $("bikeEditModal").classList.remove("active");
+      await fetchAllData();
+      renderAdminBikeTable();
+      renderBikeTable();
+      renderHomeStats();
+      renderDashboard();
+    } catch (err) {
+      // 錯誤已在 apiFetch 處理
+    }
+  });
+}
+
 async function fetchStationsFromServer() {
   await fetchAllData();
   renderAdminStationTable();
@@ -1687,6 +1877,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupAdminTabs();
   renderAdminUserTable();
   setupUserEdit();
+  renderAdminBikeTable();
+  setupBikeEdit();
 
   // CSV 欄位解析器：正確處理被雙引號包覆且內含逗號的欄位 (如英文地址)
   function parseCsvLine(text) {
@@ -1780,6 +1972,77 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     // 以 UTF-8 編碼讀取 CSV 文字
+    reader.readAsText(file, "UTF-8");
+  });
+
+  // 批次匯入自行車 CSV 監聽器
+  document.getElementById('uploadBikeCsvBtn').addEventListener('click', async () => {
+    const fileInput = document.getElementById('bikeCsvFileInput');
+    if (fileInput.files.length === 0) {
+      showToast(currentLang === "en" ? "Please select a bicycle CSV file first" : "請先選取自行車 CSV 檔案", "error");
+      return;
+    }
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    reader.onload = async function(e) {
+      const text = e.target.result;
+      const lines = text.split('\n');
+      
+      const bikesData = [];
+
+      // CSV format: bId, model, status, sId
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        
+        const currentline = parseCsvLine(lines[i]);
+        
+        if (currentline.length >= 3) {
+          bikesData.push({
+            bId:    currentline[0].trim(),
+            model:  currentline[1].trim(),
+            status: currentline[2].trim(),
+            sId:    currentline[3] ? currentline[3].trim() : null
+          });
+        }
+      }
+
+      if (bikesData.length === 0) {
+        showToast(currentLang === "en" ? "No valid bicycle records found in CSV" : "CSV 檔案中無有效自行車資料", "error");
+        return;
+      }
+
+      showToast(currentLang === "en" 
+        ? "Sending " + bikesData.length + " bicycle records, please wait..."
+        : "正在傳送 " + bikesData.length + " 筆自行車資料，請稍候...");
+
+      try {
+        const response = await fetch('/api/bikes/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bikes: bikesData })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          showToast(currentLang === "en"
+            ? `Successfully imported ${result.count} bicycle records!`
+            : `成功匯入 ${result.count} 筆自行車資料！`, "success");
+          
+          await fetchAllData();
+          renderAdminBikeTable();
+          renderBikeTable();
+          renderHomeStats();
+          renderDashboard();
+        } else {
+          showToast(currentLang === "en" ? "Import failed: " + result.message : "匯入失敗: " + result.message, "error");
+        }
+      } catch (err) {
+        showToast(currentLang === "en" ? "Connection error: " + err.message : "連線後端發生錯誤: " + err.message, "error");
+      }
+    };
+
     reader.readAsText(file, "UTF-8");
   });
 
