@@ -33,35 +33,73 @@ let STATIONS = [
 ];
 
 let USERS = [
-  { uId: "U0001", name: "Tony Lin",    gender: "M", rentCount: 10, returnCount: 10 },
-  { uId: "U0002", name: "Mary Jane",   gender: "F", rentCount:  5, returnCount:  4 },
-  { uId: "U0003", name: "John Doe",    gender: "M", rentCount:  2, returnCount:  2 },
-  { uId: "U0004", name: "Emily Chen",  gender: "F", rentCount:  0, returnCount:  0 },
-  { uId: "U0005", name: "Bruce Wang",  gender: "M", rentCount: 15, returnCount: 15 }
+  { uId: "U0001", name: "Tony Lin",    gender: "M", rentCount: 24, returnCount: 24 },
+  { uId: "U0002", name: "Mary Jane",   gender: "F", rentCount: 15, returnCount: 14 },
+  { uId: "U0003", name: "John Doe",    gender: "M", rentCount: 8,  returnCount: 8  },
+  { uId: "U0004", name: "Emily Chen",  gender: "F", rentCount: 3,  returnCount: 3  },
+  { uId: "U0005", name: "Bruce Wang",  gender: "M", rentCount: 42, returnCount: 42 },
+  { uId: "U0006", name: "David Beckham", gender: "M", rentCount: 19, returnCount: 18 },
+  { uId: "U0007", name: "Sarah Connor", gender: "F", rentCount: 11, returnCount: 11 },
+  { uId: "U0008", name: "James Bond",  gender: "M", rentCount: 57, returnCount: 57 },
+  { uId: "U0009", name: "Alice Wonderland", gender: "F", rentCount: 5, returnCount: 5 },
+  { uId: "U0010", name: "Bob Builder", gender: "M", rentCount: 12, returnCount: 11 },
+  { uId: "U0011", name: "Peter Parker", gender: "M", rentCount: 33, returnCount: 33 },
+  { uId: "U0012", name: "Clark Kent",  gender: "M", rentCount: 8,  returnCount: 8  },
+  { uId: "U0013", name: "Diana Prince", gender: "F", rentCount: 29, returnCount: 29 },
+  { uId: "U0014", name: "Bruce Wayne", gender: "M", rentCount: 95, returnCount: 95 },
+  { uId: "U0015", name: "Selina Kyle", gender: "F", rentCount: 17, returnCount: 17 }
 ];
 
 let BIKES = [
   { bId: "B0001", model: "Giant Escape 3",   status: "Available", sId: "S0001" },
   { bId: "B0002", model: "Giant Escape 3",   status: "Rented",    sId: null   },
   { bId: "B0003", model: "Merida Crossway",  status: "Repair",    sId: "S0003" },
-  { bId: "B0004", model: "Merida Crossway",  status: "Available", sId: "S0002" }
+  { bId: "B0004", model: "Merida Crossway",  status: "Available", sId: "S0002" },
+  { bId: "B0005", model: "Giant Escape 3",   status: "Available", sId: "S0001" },
+  { bId: "B0006", model: "Giant Escape 3",   status: "Available", sId: "S0002" },
+  { bId: "B0007", model: "YouBike 2.0",      status: "Available", sId: "S0001" },
+  { bId: "B0008", model: "YouBike 2.0",      status: "Rented",    sId: null   },
+  { bId: "B0009", model: "YouBike 2.0",      status: "Repair",    sId: null   },
+  { bId: "B0010", model: "Giant Escape 3",   status: "Available", sId: "S0003" },
+  { bId: "B0011", model: "Merida Crossway",  status: "Available", sId: "S0004" },
+  { bId: "B0012", model: "Giant Escape 3",   status: "Available", sId: "S0002" },
+  { bId: "B0013", model: "YouBike 2.0",      status: "Available", sId: "S0003" },
+  { bId: "B0014", model: "YouBike 2.0",      status: "Available", sId: "S0004" },
+  { bId: "B0015", model: "Merida Crossway",  status: "Available", sId: "S0001" },
+  { bId: "B0016", model: "Giant Escape 3",   status: "Rented",    sId: null   },
+  { bId: "B0017", model: "YouBike 2.0",      status: "Available", sId: "S0002" },
+  { bId: "B0018", model: "Merida Crossway",  status: "Available", sId: "S0003" },
+  { bId: "B0019", model: "Giant Escape 3",   status: "Available", sId: "S0004" },
+  { bId: "B0020", model: "YouBike 2.0",      status: "Repair",    sId: "S0001" }
 ];
 
 let RECORDS = [
-  { uId: "U0001", bId: "B0001", rentTime: "2026-05-28 08:00:00", returnTime: "2026-05-28 08:30:00" },
-  { uId: "U0002", bId: "B0002", rentTime: "2026-05-29 09:00:00", returnTime: "" },
-  { uId: "U0003", bId: "B0004", rentTime: "2026-05-29 10:00:00", returnTime: "2026-05-29 11:20:00" },
-  { uId: "U0005", bId: "B0003", rentTime: "2026-05-30 13:00:00", returnTime: "" }
+  { uId: "U0001", bId: "B0001", rentTime: "2026-06-23 08:00:00", returnTime: "2026-06-23 08:30:00" },
+  { uId: "U0002", bId: "B0002", rentTime: "2026-06-24 09:00:00", returnTime: "" },
+  { uId: "U0003", bId: "B0004", rentTime: "2026-06-24 10:00:00", returnTime: "2026-06-24 11:20:00" },
+  { uId: "U0005", bId: "B0003", rentTime: "2026-06-24 13:00:00", returnTime: "2026-06-24 14:15:00" },
+  { uId: "U0006", bId: "B0008", rentTime: "2026-06-25 07:30:00", returnTime: "" },
+  { uId: "U0008", bId: "B0011", rentTime: "2026-06-25 08:15:00", returnTime: "2026-06-25 09:05:00" },
+  { uId: "U0010", bId: "B0016", rentTime: "2026-06-25 11:00:00", returnTime: "" },
+  { uId: "U0011", bId: "B0005", rentTime: "2026-06-25 12:30:00", returnTime: "2026-06-25 13:10:00" },
+  { uId: "U0013", bId: "B0012", rentTime: "2026-06-25 14:00:00", returnTime: "2026-06-25 15:45:00" },
+  { uId: "U0014", bId: "B0014", rentTime: "2026-06-25 15:20:00", returnTime: "2026-06-25 15:50:00" },
+  { uId: "U0015", bId: "B0015", rentTime: "2026-06-25 16:10:00", returnTime: "2026-06-25 17:00:00" },
+  { uId: "U0008", bId: "B0007", rentTime: "2026-06-25 18:00:00", returnTime: "2026-06-25 18:40:00" }
 ];
 
 let SERVICES = [
   { formId: "F0001", no: "N001", sId: "S0001", desc: "App crash on login",                    uId: "U0001", status: "處理中" },
   { formId: "F0002", no: "N001", sId: "S0004", desc: "Overcharged on last ride",               uId: "U0002", status: "已完成" },
   { formId: "F0003", no: "N002", sId: "S0003", desc: "Station full cannot return bike",        uId: "U0003", status: "處理中" },
-  { formId: "F0004", no: "N003", sId: "S0002", desc: "Broken bike lock",                      uId: "U0005", status: "處理中" }
+  { formId: "F0004", no: "N003", sId: "S0002", desc: "Broken bike lock",                      uId: "U0005", status: "處理中" },
+  { formId: "F0005", no: "N001", sId: "S0001", desc: "Brakes not responsive on B0001",        uId: "U0008", status: "已完成" },
+  { formId: "F0006", no: "N002", sId: "S0003", desc: "Flat tire on B0010",                    uId: "U0011", status: "處理中" },
+  { formId: "F0007", no: "N003", sId: "S0004", desc: "Bike dock QR code scratched off",        uId: "U0013", status: "已完成" },
+  { formId: "F0008", no: "N001", sId: "S0002", desc: "Left personal belongings in basket",     uId: "U0015", status: "處理中" }
 ];
 
-let nextFormIdNumber = 5;
+let nextFormIdNumber = 9;
 
 // ============================================
 // 3. 第二階段：SQL Server / SSMS 連線設定
@@ -838,13 +876,17 @@ app.get('/api/services', async (req, res) => {
   }
 });
 
-// 2. 提交新問題回報
 app.post('/api/services', async (req, res) => {
   try {
-    const { no, sId, uId, desc } = req.body;
+    const { sId, uId, desc } = req.body;
+    let { no } = req.body;
 
-    if (!no || !sId || !uId || !desc) {
-      return res.status(400).json({ success: false, message: "案件編號、站點、會員與問題描述為必填欄位" });
+    if (!sId || !uId || !desc) {
+      return res.status(400).json({ success: false, message: "站點、會員與問題描述為必填欄位" });
+    }
+
+    if (!no) {
+      no = "N001"; // 預設案件編號
     }
 
     const formId = await db.addService({ no, sId, uId, desc });

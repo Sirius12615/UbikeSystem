@@ -146,11 +146,8 @@ const LANG_TEXT = {
   caseNoPlaceholder:       { zh: "例：N001",                     en: "e.g. N001" },
 
   // Dashboard
-  dashBikesChartTitle: { zh: "各站點自行車數量比較",  en: "Bikes per Station" },
-  dashSlotsChartTitle: { zh: "各站點空位數量比較",    en: "Empty Slots per Station" },
-  dashRepairTitle:     { zh: "維修中車輛數",          en: "Bikes Under Repair" },
-  dashRepairHint:      { zh: "目前正在維修的自行車總數", en: "Total number of bikes currently under repair." },
-  dashPopularTitle:    { zh: "熱門站點排行",          en: "Popular Stations" },
+  dashAvailabilityRateTitle: { zh: "各站點見車率",  en: "Bike Availability Rate per Station" },
+  dashEmptyRateTitle:        { zh: "各站點空車率",  en: "Empty Slot Rate per Station" },
 
   // Page title & Logo
   pageTitle:      { zh: "智慧共享自行車資料庫查詢與管理系統",
@@ -1069,7 +1066,7 @@ function renderServiceTable() {
   }
 
   if (list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6">
+    tbody.innerHTML = `<tr><td colspan="5">
       <div class="empty-state"><div class="empty-state-icon">📭</div>${currentLang === "en" ? "No reports yet" : "目前沒有回報紀錄"}</div>
     </td></tr>`;
     return;
@@ -1080,7 +1077,6 @@ function renderServiceTable() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${sv.formId}</td>
-      <td>${sv.no || "-"}</td>
       <td>${sv.uId}</td>
       <td>${getStationName(sv.sId)}</td>
       <td>${sv.desc}</td>
@@ -1094,11 +1090,10 @@ function setupServiceForm() {
     e.preventDefault();
     const uId  = $("formUid").value.trim().toUpperCase();
     const sId  = $("formSid").value;
-    const no   = $("formNo").value.trim().toUpperCase();
     const type = $("formType").value;
     const desc = $("formDesc").value.trim();
 
-    if (!uId || !sId || !no || !type || !desc) {
+    if (!uId || !sId || !type || !desc) {
       showToast(currentLang === "en" ? "Please fill in all required fields" : "請填寫所有必填欄位", "error");
       return;
     }
@@ -1112,7 +1107,7 @@ function setupServiceForm() {
       const res = await apiFetch(`/api/services`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ no, sId, uId, desc: `[${type}] ${desc}` })
+        body: JSON.stringify({ sId, uId, desc: `[${type}] ${desc}` })
       });
 
       if (res.success) {
@@ -1150,11 +1145,10 @@ function setupAdminServiceForm() {
     e.preventDefault();
     const uId  = $("adminFormUid").value.trim().toUpperCase();
     const sId  = $("adminFormSid").value;
-    const no   = $("adminFormNo").value.trim().toUpperCase();
     const type = $("adminFormType").value;
     const desc = $("adminFormDesc").value.trim();
 
-    if (!uId || !sId || !no || !type || !desc) {
+    if (!uId || !sId || !type || !desc) {
       showToast(currentLang === "en" ? "Please fill in all required fields" : "請填寫所有必填欄位", "error");
       return;
     }
@@ -1168,7 +1162,7 @@ function setupAdminServiceForm() {
       const res = await apiFetch(`/api/services`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ no, sId, uId, desc: `[${type}] ${desc}` })
+        body: JSON.stringify({ sId, uId, desc: `[${type}] ${desc}` })
       });
 
       if (res.success) {
@@ -1192,78 +1186,41 @@ function setupAdminServiceForm() {
    ============================================ */
 
 function renderDashboard() {
-  // Bar chart of bikes per station
-  const maxBikes = Math.max(...STATIONS.map(s => s.bikeCount), 1);
-  const bikeChart = $("bikeBarChart");
-  bikeChart.innerHTML = "";
-  STATIONS.forEach(s => {
-    const pct = Math.round((s.bikeCount / maxBikes) * 100);
-    const row = document.createElement("div");
-    row.className = "bar-row";
-    row.innerHTML = `
-      <div class="bar-label" title="${s.name}">${s.name}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
-      <div class="bar-value">${s.bikeCount}</div>`;
-    bikeChart.appendChild(row);
-  });
+  // 1. Availability Rate Bar Chart (見車率)
+  const availabilityChart = $("availabilityBarChart");
+  if (availabilityChart) {
+    availabilityChart.innerHTML = "";
+    STATIONS.forEach(s => {
+      const total = s.bikeCount + s.emptySlots;
+      const rate = total > 0 ? Math.round((s.bikeCount / total) * 100) : 0;
+      
+      const row = document.createElement("div");
+      row.className = "bar-row";
+      row.innerHTML = `
+        <div class="bar-label" title="${s.name}">${s.name}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${rate}%"></div></div>
+        <div class="bar-value">${rate}%</div>`;
+      availabilityChart.appendChild(row);
+    });
+  }
 
-  // Bar chart of empty slots
-  const maxSlots = Math.max(...STATIONS.map(s => s.emptySlots), 1);
-  const slotChart = $("slotBarChart");
-  slotChart.innerHTML = "";
-  STATIONS.forEach(s => {
-    const pct = Math.round((s.emptySlots / maxSlots) * 100);
-    const row = document.createElement("div");
-    row.className = "bar-row";
-    row.innerHTML = `
-      <div class="bar-label" title="${s.name}">${s.name}</div>
-      <div class="bar-track"><div class="bar-fill slot" style="width:${pct}%"></div></div>
-      <div class="bar-value">${s.emptySlots}</div>`;
-    slotChart.appendChild(row);
-  });
-
-  // Bikes currently under repair
-  const repair = BIKES.filter(b => b.status === "Repair").length;
-  $("repairCount").textContent = repair;
-
-  // Top popular stations – use rentCount totals from USERS (mock rental count per station)
-  // This is a "demo ranking" based on sample data
-  const rentedByStation = {};
-  RECORDS.forEach(r => {
-    const bike = BIKES.find(b => b.bId === r.bId);
-    if (bike && bike.sId) {
-      rentedByStation[bike.sId] = (rentedByStation[bike.sId] || 0) + 1;
-    }
-  });
-  // Add influence from USERS' rentCount for richer mock data
-  const userInfluence = USERS.reduce((sum, u) => sum + u.rentCount, 0);
-
-  const popular = STATIONS.map(s => {
-    const score = (rentedByStation[s.sId] || 0) * 3 + s.bikeCount + Math.round(userInfluence / STATIONS.length);
-    return { ...s, score };
-  }).sort((a, b) => b.score - a.score).slice(0, 5);
-
-  const popularList = $("popularList");
-  popularList.innerHTML = "";
-  popular.forEach((s, idx) => {
-    const rank = idx + 1;
-    const item = document.createElement("div");
-    item.className = "popular-item";
-    item.innerHTML = `
-      <div class="popular-rank rank-${rank}">${rank}</div>
-      <div class="popular-name">${s.name}</div>
-      <div class="popular-count">${s.score} ${currentLang === "en" ? "pts" : "分"}</div>`;
-    popularList.appendChild(item);
-  });
-
-  // Note: demo ranking
-  const note = document.createElement("p");
-  note.className = "hint";
-  note.style.marginTop = "8px";
-  note.textContent = currentLang === "en"
-    ? "※ Demo ranking — for display only."
-    : "※ 此為「示意排行」，僅供展示用途。";
-  popularList.appendChild(note);
+  // 2. Empty Rate Bar Chart (空車率)
+  const emptyRateChart = $("emptyRateBarChart");
+  if (emptyRateChart) {
+    emptyRateChart.innerHTML = "";
+    STATIONS.forEach(s => {
+      const total = s.bikeCount + s.emptySlots;
+      const rate = total > 0 ? Math.round((s.emptySlots / total) * 100) : 0;
+      
+      const row = document.createElement("div");
+      row.className = "bar-row";
+      row.innerHTML = `
+        <div class="bar-label" title="${s.name}">${s.name}</div>
+        <div class="bar-track"><div class="bar-fill slot" style="width:${rate}%"></div></div>
+        <div class="bar-value">${rate}%</div>`;
+      emptyRateChart.appendChild(row);
+    });
+  }
 }
 
 /* ============================================
@@ -1427,7 +1384,7 @@ function renderAdminServiceTable() {
   tbody.innerHTML = "";
 
   if (SERVICES.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7">
+    tbody.innerHTML = `<tr><td colspan="6">
       <div class="empty-state"><div class="empty-state-icon">📭</div>${currentLang === "en" ? "No reports yet" : "目前沒有回報"}</div>
     </td></tr>`;
     return;
@@ -1440,7 +1397,6 @@ function renderAdminServiceTable() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${sv.formId}</td>
-      <td>${sv.no || "-"}</td>
       <td>${sv.uId}</td>
       <td>${getStationName(sv.sId)}</td>
       <td>${sv.desc}</td>

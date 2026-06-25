@@ -276,10 +276,6 @@
               </select>
             </div>
             <div class="form-row">
-              <label><span data-i18n="thCaseNo">案件編號</span> <span class="required">*</span></label>
-              <input type="text" id="formNo" data-i18n-placeholder="caseNoPlaceholder" placeholder="例：N001" required />
-            </div>
-            <div class="form-row">
               <label><span data-i18n="formTypeLabel">問題類型</span> <span class="required">*</span></label>
               <select id="formType" required>
                 <option value="" data-i18n="formSelectType">請選擇問題類型</option>
@@ -306,7 +302,6 @@
               <thead>
                 <tr>
                   <th data-i18n="thFormId">表單編號</th>
-                  <th data-i18n="thCaseNo">案件編號</th>
                   <th data-i18n="thUserId">會員編號</th>
                   <th data-i18n="thStation">站點</th>
                   <th data-i18n="thDescription">問題描述</th>
@@ -329,27 +324,13 @@
 
       <div class="dashboard-grid">
         <div class="card">
-          <h3 data-i18n="dashBikesChartTitle">各站點自行車數量比較</h3>
-          <div id="bikeBarChart" class="bar-chart"></div>
+          <h3 data-i18n="dashAvailabilityRateTitle">各站點見車率</h3>
+          <div id="availabilityBarChart" class="bar-chart"></div>
         </div>
 
-        <div class="card">
-          <h3 data-i18n="dashSlotsChartTitle">各站點空位數量比較</h3>
-          <div id="slotBarChart" class="bar-chart"></div>
-        </div>
-
-        <div class="card">
-          <h3 data-i18n="dashRepairTitle">維修中車輛數</h3>
-          <div class="big-number">
-            <span id="repairCount">0</span>
-            <span class="unit" data-i18n="unitBikes">輛</span>
-          </div>
-          <p class="hint" data-i18n="dashRepairHint">目前正在維修的自行車總數</p>
-        </div>
-
-        <div class="card">
-          <h3 data-i18n="dashPopularTitle">熱門站點排行</h3>
-          <div id="popularList" class="popular-list"></div>
+        <div class="card" style="grid-column: span 1;">
+          <h3 data-i18n="dashEmptyRateTitle">各站點空車率</h3>
+          <div id="emptyRateBarChart" class="bar-chart"></div>
         </div>
       </div>
     </section>
@@ -441,7 +422,6 @@
               <thead>
                 <tr>
                   <th data-i18n="thFormId">表單編號</th>
-                  <th data-i18n="thCaseNo">案件編號</th>
                   <th data-i18n="thUserId">會員編號</th>
                   <th data-i18n="thStation">站點</th>
                   <th data-i18n="thDescription">問題描述</th>
@@ -603,10 +583,6 @@
           <select id="adminFormSid" required>
             <option value="" data-i18n="formSelectStation">請選擇站點</option>
           </select>
-        </div>
-        <div class="form-row">
-          <label><span data-i18n="thCaseNo">案件編號</span> <span class="required">*</span></label>
-          <input type="text" id="adminFormNo" data-i18n-placeholder="caseNoPlaceholder" placeholder="例：N001" required />
         </div>
         <div class="form-row">
           <label><span data-i18n="formTypeLabel">問題類型</span> <span class="required">*</span></label>
